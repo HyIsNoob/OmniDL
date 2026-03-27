@@ -1,5 +1,6 @@
-import { BrowserWindow, Menu, app } from "electron";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { BrowserWindow, Menu, app } from "electron";
 import { autoUpdater } from "./updater.js";
 import { initDatabase } from "./db.js";
 import { registerIpc } from "./ipc-register.js";
@@ -9,6 +10,13 @@ import { ensureYtdlp, setBinDir } from "./ytdlp.js";
 const isDev = !app.isPackaged;
 
 let mainWindow: BrowserWindow | null = null;
+
+function appIconPath(): string | undefined {
+  const p = app.isPackaged
+    ? join(process.resourcesPath, "favicon.ico")
+    : join(__dirname, "../../favicon.ico");
+  return existsSync(p) ? p : undefined;
+}
 
 function applyApplicationMenu(): void {
   if (process.platform === "darwin") {
@@ -52,6 +60,7 @@ function splashHtml(msg: string): string {
 }
 
 async function showSplashAndEnsure(): Promise<BrowserWindow> {
+  const icon = appIconPath();
   const splash = new BrowserWindow({
     width: 480,
     height: 200,
@@ -59,6 +68,7 @@ async function showSplashAndEnsure(): Promise<BrowserWindow> {
     resizable: false,
     show: false,
     backgroundColor: "#f5e6d3",
+    ...(icon ? { icon } : {}),
     webPreferences: { sandbox: true },
   });
   await splash.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(splashHtml("Checking yt-dlp…"))}`);
@@ -80,6 +90,7 @@ async function showSplashAndEnsure(): Promise<BrowserWindow> {
 }
 
 function createMainWindow(): void {
+  const icon = appIconPath();
   mainWindow = new BrowserWindow({
     width: 1100,
     height: 780,
@@ -87,6 +98,7 @@ function createMainWindow(): void {
     minHeight: 640,
     show: false,
     backgroundColor: "#f5e6d3",
+    ...(icon ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, "../preload/index.mjs"),
       contextIsolation: true,

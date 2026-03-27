@@ -1,6 +1,6 @@
 {
   "name": "omnidl",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "OmniDL — YouTube & TikTok downloader",
   "main": "out/main/index.js",
   "type": "module",
@@ -14,9 +14,9 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "lint": "eslint .",
-    "pack": "electron-vite build ; electron-builder --dir",
-    "dist": "electron-vite build ; electron-builder --publish never",
-    "release": "electron-vite build ; electron-builder --publish always"
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder --publish never",
+    "release": "npm run build && electron-builder --publish always"
   },
   "dependencies": {
     "@fontsource/archivo-black": "^5.2.8",
@@ -29,9 +29,16 @@
   "build": {
     "appId": "com.omnidl.app",
     "productName": "OmniDL",
+    "icon": "icon.png",
     "directories": {
       "output": "release"
     },
+    "extraResources": [
+      {
+        "from": "favicon.ico",
+        "to": "favicon.ico"
+      }
+    ],
     "files": [
       "out/**/*",
       "package.json",
