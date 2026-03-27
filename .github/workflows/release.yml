@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   windows:
     runs-on: windows-latest
@@ -25,10 +29,7 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Build app
-        run: npm run build
-
-      - name: Publish to GitHub Releases
+      - name: Build and publish to GitHub Releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run release
