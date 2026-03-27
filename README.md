@@ -1,19 +1,55 @@
-# OmniDL
+<div align="center">
+	<img src="./icon.png" alt="OmniDL" width="120" />
+<h1>OmniDL</h1>
+<p>Desktop <strong>YouTube</strong> &amp; <strong>TikTok</strong> downloader for Windows — neo-brutalist UI, <strong>yt-dlp</strong> powered, local-first queue and history. Built with Electron, React, and TypeScript.</p>
 
-Desktop app (Electron) for downloading **YouTube** and **TikTok** with a neo-brutalist UI: sequential queue, format selection, history (SQLite via sql.js), clipboard detection, **yt-dlp** updates, and in-app updates via GitHub Releases (electron-updater).
+<p>
+	<a href="https://github.com/HyIsNoob/OmniDL"><img alt="Repo" src="https://img.shields.io/badge/GitHub-OmniDL-000?logo=github" /></a>
+	<a href="https://github.com/HyIsNoob/OmniDL/releases"><img alt="Version" src="https://img.shields.io/github/v/release/HyIsNoob/OmniDL?label=version&color=blue" /></a>
+	<img alt="License" src="https://img.shields.io/badge/license-MIT-green" />
+	<img alt="Electron" src="https://img.shields.io/badge/Electron-33.x-47848F?logo=electron" />
+</p>
+</div>
 
-## Screenshots (placeholders)
+---
 
-Replace the SVG files in [`docs/screenshots/`](docs/screenshots/) with real PNG/JPG exports (same filenames or update the paths below).
+## Overview
 
+OmniDL wraps **yt-dlp** and **FFmpeg** in a focused UI: paste a link, pick a format, enqueue downloads, and track progress in one place. Settings and history stay on disk (SQLite via **sql.js**). Optional **clipboard watch** fills the Home URL when you copy a supported link. Updates ship through **GitHub Releases** (electron-updater).
 
 ## Features
 
-- **Home**: paste URL, fetch metadata, pick video/audio and format, enqueue downloads.
-- **Queue**: sequential downloads, progress / pause / cancel; FFmpeg via `ffmpeg-static`.
-- **YouTube playlist**: list entries and bulk enqueue (configurable limit).
-- **History**: download history (sql.js).
-- **Options**: download folder, clipboard watch, auto-fetch, yt-dlp check/update, app updates.
+Replace files under [`docs/screenshots/`](docs/screenshots/) with real PNG or JPG captures when you are ready. Paths below point at SVG placeholders until then.
+
+### Home
+
+Paste a **YouTube** or **TikTok** video URL, run **Fetch** to load title, duration, and format ladder (with rough size hints). Choose **video** or **audio**, pick a quality preset, set output folder, then **Add to queue** (next or end). **Auto-fetch** (in Options) can run Fetch automatically when the URL field changes.
+
+<img src="./docs/screenshots/placeholder-home.svg" alt="Home tab" width="100%" />
+
+### Queue
+
+Runs downloads **one at a time** with progress, speed, and ETA. **Pause**, **resume**, or **cancel** the active job; queued items wait in order. Uses **ffmpeg-static** for merge when needed.
+
+<img src="./docs/screenshots/placeholder-queue.svg" alt="Queue tab" width="100%" />
+
+### Playlist (YouTube)
+
+Enter a **playlist** URL, set a **limit** (max entries), and **Get playlist** to list titles. Enqueue many items at once with your chosen default format mode (e.g. best video, 480p cap, best audio).
+
+<img src="./docs/screenshots/placeholder-playlist.svg" alt="Playlist tab" width="100%" />
+
+### History
+
+Browse **past downloads**: titles, paths, and quick actions such as opening the output folder. Data is stored locally in the app user data directory.
+
+<img src="./docs/screenshots/placeholder-history.svg" alt="History tab" width="100%" />
+
+### Options
+
+Configure **download directory**, **clipboard detection** (YouTube / TikTok video links; playlist-only URLs are ignored for Home paste), **auto-fetch**, **yt-dlp** version check and update, and **application updates** from GitHub.
+
+<img src="./docs/screenshots/placeholder-options.svg" alt="Options tab" width="100%" />
 
 ## Requirements
 
@@ -32,8 +68,17 @@ npm run build
 npm run dist
 ```
 
-- Output is written to `release/` (gitignored).
-- To publish a release on GitHub, see **Releases with GitHub Actions** below.
+Output is written to `release/` (gitignored).
+
+### Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Dev mode (electron-vite) |
+| `npm run build` | Build main, preload, and renderer |
+| `npm run lint` | ESLint |
+| `npm run dist` | Build + electron-builder (no publish) |
+| `npm run release` | Build + publish to GitHub Releases (`GH_TOKEN` / CI) |
 
 ## Auto-update
 
