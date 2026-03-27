@@ -25,31 +25,36 @@ Replace files under [`docs/screenshots/`](docs/screenshots/) with real PNG or JP
 
 Paste a **YouTube** or **TikTok** video URL, run **Fetch** to load title, duration, and format ladder (with rough size hints). Choose **video** or **audio**, pick a quality preset, set output folder, then **Add to queue** (next or end). **Auto-fetch** (in Options) can run Fetch automatically when the URL field changes.
 
-<img src="./docs/screenshots/placeholder-home.svg" alt="Home tab" width="100%" />
+<img width="1919" height="984" alt="image" src="https://github.com/user-attachments/assets/e5da5763-7624-4813-aaaf-1c3685680305" />
+
 
 ### Queue
 
 Runs downloads **one at a time** with progress, speed, and ETA. **Pause**, **resume**, or **cancel** the active job; queued items wait in order. Uses **ffmpeg-static** for merge when needed.
 
-<img src="./docs/screenshots/placeholder-queue.svg" alt="Queue tab" width="100%" />
+<img width="1907" height="967" alt="image" src="https://github.com/user-attachments/assets/f4e70853-12a4-4f73-846c-ae96d241a449" />
+
 
 ### Playlist (YouTube)
 
 Enter a **playlist** URL, set a **limit** (max entries), and **Get playlist** to list titles. Enqueue many items at once with your chosen default format mode (e.g. best video, 480p cap, best audio).
 
-<img src="./docs/screenshots/placeholder-playlist.svg" alt="Playlist tab" width="100%" />
+<img width="1919" height="977" alt="image" src="https://github.com/user-attachments/assets/55a92519-fb0a-474c-9ca6-9e9b782170dd" />
+
 
 ### History
 
 Browse **past downloads**: titles, paths, and quick actions such as opening the output folder. Data is stored locally in the app user data directory.
 
-<img src="./docs/screenshots/placeholder-history.svg" alt="History tab" width="100%" />
+<img width="1919" height="991" alt="image" src="https://github.com/user-attachments/assets/e0410e7a-d146-4482-8d4d-74ae113daf7f" />
+
 
 ### Options
 
 Configure **download directory**, **clipboard detection** (YouTube / TikTok video links; playlist-only URLs are ignored for Home paste), **auto-fetch**, **yt-dlp** version check and update, and **application updates** from GitHub.
 
-<img src="./docs/screenshots/placeholder-options.svg" alt="Options tab" width="100%" />
+<img width="1919" height="978" alt="image" src="https://github.com/user-attachments/assets/08011c98-c2a4-4d92-b1dd-d430f45ee35e" />
+
 
 ## Requirements
 
