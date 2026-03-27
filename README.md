@@ -6,14 +6,6 @@ Desktop app (Electron) for downloading **YouTube** and **TikTok** with a neo-bru
 
 Replace the SVG files in [`docs/screenshots/`](docs/screenshots/) with real PNG/JPG exports (same filenames or update the paths below).
 
-| Tab | Placeholder |
-|-----|-------------|
-| Home | ![Home](docs/screenshots/placeholder-home.svg) |
-| Queue | ![Queue](docs/screenshots/placeholder-queue.svg) |
-| Playlist | ![Playlist](docs/screenshots/placeholder-playlist.svg) |
-| Options | ![Options](docs/screenshots/placeholder-options.svg) |
-
-Recommended aspect ratio: ~16:9 (e.g. 1280×720).
 
 ## Features
 
@@ -42,33 +34,6 @@ npm run dist
 
 - Output is written to `release/` (gitignored).
 - To publish a release on GitHub, see **Releases with GitHub Actions** below.
-
-### Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Dev mode (electron-vite) |
-| `npm run build` | Build main, preload, and renderer |
-| `npm run lint` | ESLint |
-| `npm run dist` | Build + electron-builder (no publish) |
-| `npm run release` | Build + publish to GitHub Releases (`GH_TOKEN` / CI) |
-
-## Releases with GitHub Actions
-
-1. Bump `version` in `package.json` for each release (and `repository` / `build.publish` if the repo changes).
-2. Commit, tag, and push:
-
-```powershell
-git add -A
-git commit -m "Release v1.0.1"
-git tag v1.0.1
-git push origin main
-git push origin v1.0.1
-```
-
-The **Release** workflow (`.github/workflows/release.yml`) runs on Windows, builds the installer + portable, and attaches them to the GitHub Release.
-
-The **CI** workflow (`.github/workflows/ci.yml`) runs lint + build on every push/PR to `main` / `master`.
 
 ## Auto-update
 
