@@ -1,6 +1,6 @@
 {
   "name": "omnidl",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "OmniDL — YouTube & TikTok downloader",
   "main": "out/main/index.js",
   "type": "module",
@@ -8,14 +8,15 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/omnidl.git"
+    "url": "https://github.com/HyIsNoob/OmniDL.git"
   },
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "lint": "eslint .",
     "pack": "electron-vite build ; electron-builder --dir",
-    "dist": "electron-vite build ; electron-builder"
+    "dist": "electron-vite build ; electron-builder --publish never",
+    "release": "electron-vite build ; electron-builder --publish always"
   },
   "dependencies": {
     "@fontsource/archivo-black": "^5.2.8",
@@ -49,8 +50,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "your-org",
-        "repo": "omnidl"
+        "owner": "HyIsNoob",
+        "repo": "OmniDL"
       }
     ]
   },
