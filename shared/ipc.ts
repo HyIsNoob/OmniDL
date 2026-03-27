@@ -20,6 +20,7 @@ export interface QueueJob {
   outputTemplate: string;
   kind: DownloadKind;
   platform?: string;
+  thumbnailUrl?: string;
   status: JobStatus;
   progress: number;
   speed?: string;
@@ -82,4 +83,5 @@ export interface HistoryRow {
   kind: DownloadKind;
   createdAt: number;
   exists: boolean;
+  thumbnailPath: string | null;
 }

@@ -26,6 +26,7 @@ const api = {
     outputDir: string;
     kind: "video" | "audio";
     platform?: string;
+    thumbnailUrl?: string;
   }) => ipcRenderer.invoke("queue:addDownload", payload) as Promise<QueueJob>,
   queueAddToQueue: (payload: {
     url: string;
@@ -35,6 +36,7 @@ const api = {
     outputDir: string;
     kind: "video" | "audio";
     platform?: string;
+    thumbnailUrl?: string;
   }) => ipcRenderer.invoke("queue:addToQueue", payload) as Promise<QueueJob>,
   queuePause: (id: string) => ipcRenderer.invoke("queue:pause", id),
   queueResume: (id: string) => ipcRenderer.invoke("queue:resume", id),
@@ -45,6 +47,8 @@ const api = {
   historyList: () => ipcRenderer.invoke("history:list") as Promise<HistoryRow[]>,
   historyRemove: (id: string) => ipcRenderer.invoke("history:remove", id),
   historyClear: () => ipcRenderer.invoke("history:clear"),
+  readImageDataUrl: (filePath: string) =>
+    ipcRenderer.invoke("media:readImageDataUrl", filePath) as Promise<string | null>,
   openDirectory: () => ipcRenderer.invoke("dialog:openDirectory") as Promise<string | null>,
   showItemInFolder: (p: string) => ipcRenderer.invoke("shell:showItemInFolder", p),
   openPath: (p: string) => ipcRenderer.invoke("shell:openPath", p),

@@ -7,7 +7,7 @@ export function BrutalPanel({
 }) {
   return (
     <div
-      className={`border-4 border-[#111] bg-[#fffef8] shadow-[8px_8px_0_0_#111] transition-shadow hover:shadow-[10px_10px_0_0_#111] ${className}`}
+      className={`border-4 border-[#111] bg-[#fffef8] shadow-[8px_8px_0_0_#111] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[10px_10px_0_0_#111] ${className}`}
     >
       {children}
     </div>

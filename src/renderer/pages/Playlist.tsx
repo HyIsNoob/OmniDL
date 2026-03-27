@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { FolderOpen, ListVideo, Loader2, Plus } from "lucide-react";
 import type { PlaylistInfoPayload } from "@shared/ipc";
 import { BrutalPanel } from "../components/BrutalPanel";
+
+const btnHover =
+  "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#111] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none";
 
 type PlMode = "480" | "bestv" | "besta";
 
@@ -13,7 +17,7 @@ function selectorFor(mode: PlMode): { label: string; formatSelector: string; kin
       kind: "video",
     };
   if (mode === "bestv")
-    return { label: "Best video", formatSelector: "bv*+ba/b", kind: "video" };
+    return { label: "Best video", formatSelector: "bestvideo+bestaudio/best", kind: "video" };
   return { label: "Best audio", formatSelector: "ba/b", kind: "audio" };
 }
 
@@ -75,6 +79,7 @@ export function Playlist() {
         outputDir: outDir,
         kind,
         platform: "youtube",
+        thumbnailUrl: e.thumbnail ?? undefined,
       });
     }
   };
@@ -101,21 +106,31 @@ export function Playlist() {
             onChange={(e) => setLimit(Number(e.target.value))}
             className="w-24 border-4 border-[#111] bg-white px-2 py-2 font-bold"
           />
-          <button
+          <motion.button
             type="button"
             disabled={loading || !url.trim()}
             onClick={() => void load()}
-            className="inline-flex items-center gap-2 border-4 border-[#111] bg-[#ffe66d] px-4 py-2 font-black uppercase shadow-[4px_4px_0_0_#111] disabled:opacity-50"
+            whileHover={loading || !url.trim() ? undefined : { y: -2 }}
+            whileTap={loading || !url.trim() ? undefined : { scale: 0.98 }}
+            className={`inline-flex items-center gap-2 border-4 border-[#111] bg-[#ffe66d] px-4 py-2 font-black uppercase shadow-[4px_4px_0_0_#111] disabled:opacity-50 ${btnHover}`}
           >
             {loading ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : null}
             {loading ? "…" : "Get playlist"}
-          </button>
+          </motion.button>
         </div>
         {err && <p className="mt-2 text-sm font-bold text-red-700">{err}</p>}
       </BrutalPanel>
 
-      {data && (
-        <BrutalPanel className="p-5">
+      <AnimatePresence mode="wait">
+        {data ? (
+          <motion.div
+            key={data.title}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <BrutalPanel className="p-5">
           <div className="text-lg font-black">{data.title}</div>
           <div className="mt-3 flex flex-wrap gap-2">
             <label className="text-xs font-black uppercase">Quality</label>
@@ -149,34 +164,46 @@ export function Playlist() {
             <div className="min-w-0 flex-1 truncate border-4 border-[#111] bg-white px-2 py-2 text-xs font-semibold">
               {outDir}
             </div>
-            <button
+            <motion.button
               type="button"
               onClick={() => void pickDir()}
-              className="inline-flex items-center gap-2 border-4 border-[#111] bg-[#fab1a0] px-3 py-2 text-xs font-black uppercase"
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              className={`inline-flex items-center gap-2 border-4 border-[#111] bg-[#fab1a0] px-3 py-2 text-xs font-black uppercase shadow-[4px_4px_0_0_#111] ${btnHover}`}
             >
               <FolderOpen className="h-4 w-4" strokeWidth={2} aria-hidden />
               Folder
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               type="button"
               disabled={!outDir}
               onClick={() => void enqueueBatch()}
-              className="inline-flex items-center gap-2 border-4 border-[#111] bg-[#ff6b6b] px-4 py-2 font-black uppercase text-white disabled:opacity-50"
+              whileHover={outDir ? { y: -2 } : undefined}
+              whileTap={outDir ? { scale: 0.98 } : undefined}
+              className={`inline-flex items-center gap-2 border-4 border-[#111] bg-[#ff6b6b] px-4 py-2 font-black uppercase text-white shadow-[4px_4px_0_0_#111] disabled:opacity-50 ${btnHover}`}
             >
               <Plus className="h-5 w-5" strokeWidth={2} aria-hidden />
               Enqueue all
-            </button>
+            </motion.button>
           </div>
           <ul className="mt-4 max-h-80 space-y-2 overflow-auto pr-1 text-sm font-bold">
-            {data.entries.map((e) => (
-              <li key={e.id + e.index} className="flex gap-2 border-4 border-[#111] bg-white px-2 py-1">
+            {data.entries.map((e, i) => (
+              <motion.li
+                key={e.id + e.index}
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: Math.min(i * 0.02, 0.4), duration: 0.2 }}
+                className="flex gap-2 border-4 border-[#111] bg-white px-2 py-1"
+              >
                 <span className="w-8 text-neutral-500">{e.index}</span>
                 <span className="min-w-0 flex-1 truncate">{e.title}</span>
-              </li>
+              </motion.li>
             ))}
           </ul>
         </BrutalPanel>
-      )}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }

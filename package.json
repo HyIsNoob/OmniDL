@@ -1,6 +1,6 @@
 {
   "name": "omnidl",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "OmniDL — YouTube & TikTok downloader",
   "main": "out/main/index.js",
   "type": "module",
@@ -48,6 +48,10 @@
       "**/node_modules/ffmpeg-static/**/*",
       "**/node_modules/sql.js/dist/sql-wasm.wasm"
     ],
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
     "win": {
       "target": [
         "nsis",

@@ -1,6 +1,7 @@
 import { app, clipboard, dialog, ipcMain, shell } from "electron";
 import { autoUpdater } from "./updater.js";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, unlinkSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 import { buildPlaylistPayload, buildVideoPayload } from "./formats.js";
 import {
   historyClear,
@@ -78,6 +79,7 @@ export function registerIpc(isDev: boolean): void {
         outputDir: string;
         kind: "video" | "audio";
         platform?: string;
+        thumbnailUrl?: string;
       },
     ) => {
       return addJob({ ...payload, mode: "next" });
@@ -95,6 +97,7 @@ export function registerIpc(isDev: boolean): void {
         outputDir: string;
         kind: "video" | "audio";
         platform?: string;
+        thumbnailUrl?: string;
       },
     ) => {
       return addJob({ ...payload, mode: "end" });
@@ -121,10 +124,45 @@ export function registerIpc(isDev: boolean): void {
       kind: h.kind as "video" | "audio",
       createdAt: h.createdAt,
       exists: existsSync(h.mediaPath),
+      thumbnailPath: h.thumbnailPath,
     }));
   });
-  ipcMain.handle("history:remove", (_e, id: string) => historyRemove(id));
-  ipcMain.handle("history:clear", () => historyClear());
+  ipcMain.handle("history:remove", (_e, id: string) => {
+    const row = historyList().find((r) => r.id === id);
+    if (row?.thumbnailPath && existsSync(row.thumbnailPath)) {
+      try {
+        unlinkSync(row.thumbnailPath);
+      } catch {
+        /* ignore */
+      }
+    }
+    historyRemove(id);
+  });
+  ipcMain.handle("history:clear", () => {
+    for (const h of historyList()) {
+      if (h.thumbnailPath && existsSync(h.thumbnailPath)) {
+        try {
+          unlinkSync(h.thumbnailPath);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    historyClear();
+  });
+
+  ipcMain.handle("media:readImageDataUrl", (_e, filePath: string) => {
+    if (!filePath || !existsSync(filePath)) return null;
+    const base = resolve(join(app.getPath("userData"), "thumbnails"));
+    const abs = resolve(filePath);
+    const rel = relative(base, abs);
+    if (rel.startsWith("..") || rel === "" || rel.includes("..")) return null;
+    const buf = readFileSync(abs);
+    if (buf.length < 32) return null;
+    const isPng = buf[0] === 0x89 && buf[1] === 0x50;
+    const mime = isPng ? "image/png" : "image/jpeg";
+    return `data:${mime};base64,${buf.toString("base64")}`;
+  });
 
   ipcMain.handle("dialog:openDirectory", async () => {
     const r = await dialog.showOpenDialog({

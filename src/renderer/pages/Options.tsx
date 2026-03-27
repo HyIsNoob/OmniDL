@@ -1,14 +1,20 @@
 import { useEffect, useState } from "react";
-import { Clipboard, Download, RefreshCw, Sparkles } from "lucide-react";
+import { motion } from "framer-motion";
+import { Bell, Clipboard, Download, RefreshCw, Sparkles } from "lucide-react";
 import { BrutalPanel } from "../components/BrutalPanel";
 import { useSettingsStore } from "../store/settingsUi";
+
+const btnHover =
+  "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#111] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none";
 
 export function Options() {
   const hydrated = useSettingsStore((s) => s.hydrated);
   const clipboardWatch = useSettingsStore((s) => s.clipboardWatch);
   const autoFetch = useSettingsStore((s) => s.autoFetch);
+  const notificationsPush = useSettingsStore((s) => s.notificationsPush);
   const setClipboardWatch = useSettingsStore((s) => s.setClipboardWatch);
   const setAutoFetch = useSettingsStore((s) => s.setAutoFetch);
+  const setNotificationsPush = useSettingsStore((s) => s.setNotificationsPush);
   const [appV, setAppV] = useState("");
   const [ytV, setYtV] = useState<string | null>(null);
   const [remote, setRemote] = useState<string | null>(null);
@@ -41,7 +47,7 @@ export function Options() {
           Clipboard & fetch
         </div>
         <p className="mt-2 text-sm font-semibold text-neutral-600">
-          Bật phát hiện link trong clipboard sẽ tự điền ô URL ở Home và chuyển sang tab Home. Bỏ qua chỉ URL trang playlist YouTube (playlist?list=…); link video có thêm &list= vẫn nhận. Tab Playlist không tự fetch từ clipboard. Auto-fetch gọi Fetch khi URL hợp lệ thay đổi ở Home.
+          Bật phát hiện link trong clipboard: chỉ trích URL https (YouTube / TikTok) trong đoạn text rồi điền ô URL ở Home và chuyển tab Home. Bỏ qua URL chỉ trang playlist (playlist?list=…); link video có thêm &list= vẫn nhận. Tab Playlist không tự fetch từ clipboard. Auto-fetch gọi Fetch khi URL hợp lệ thay đổi ở Home.
         </p>
         <label className="mt-4 flex cursor-pointer items-start gap-3 border-4 border-[#111] bg-white p-3 font-bold transition-colors hover:bg-neutral-50">
           <input
@@ -75,6 +81,30 @@ export function Options() {
 
       <BrutalPanel className="p-5">
         <div className="flex items-center gap-2 text-lg font-black">
+          <Bell className="h-6 w-6" strokeWidth={2} aria-hidden />
+          Notifications
+        </div>
+        <p className="mt-2 text-sm font-semibold text-neutral-600">
+          OS toast when a download completes (in-app dialog with Play / Open folder / Done always shows).
+        </p>
+        <label className="mt-4 flex cursor-pointer items-start gap-3 border-4 border-[#111] bg-white p-3 font-bold transition-colors hover:bg-neutral-50">
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4"
+            checked={notificationsPush}
+            onChange={(e) => void setNotificationsPush(e.target.checked)}
+          />
+          <span>
+            <span className="font-black uppercase">System push notifications</span>
+            <span className="mt-1 block text-xs font-semibold text-neutral-600">
+              Windows notification for completed downloads (default on)
+            </span>
+          </span>
+        </label>
+      </BrutalPanel>
+
+      <BrutalPanel className="p-5">
+        <div className="flex items-center gap-2 text-lg font-black">
           <Sparkles className="h-6 w-6" strokeWidth={2} aria-hidden />
           Updates
         </div>
@@ -90,41 +120,49 @@ export function Options() {
           ) : null}
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button
+          <motion.button
             type="button"
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.98 }}
             onClick={async () => {
               const v = await window.omnidl.ytdlpEnsure();
               setYtV(v);
             }}
-            className="inline-flex items-center gap-2 border-4 border-[#111] bg-[#ffe66d] px-3 py-2 text-xs font-black uppercase shadow-[4px_4px_0_0_#111]"
+            className={`inline-flex items-center gap-2 border-4 border-[#111] bg-[#ffe66d] px-3 py-2 text-xs font-black uppercase shadow-[4px_4px_0_0_#111] ${btnHover}`}
           >
             <RefreshCw className="h-4 w-4" strokeWidth={2} aria-hidden />
             Update yt-dlp
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             type="button"
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.98 }}
             onClick={async () => {
               await window.omnidl.updaterCheck();
             }}
-            className="inline-flex items-center gap-2 border-4 border-[#111] bg-white px-3 py-2 text-xs font-black uppercase shadow-[4px_4px_0_0_#111]"
+            className={`inline-flex items-center gap-2 border-4 border-[#111] bg-white px-3 py-2 text-xs font-black uppercase shadow-[4px_4px_0_0_#111] ${btnHover}`}
           >
             Check app update
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             type="button"
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => void window.omnidl.updaterDownload()}
-            className="inline-flex items-center gap-2 border-4 border-[#111] bg-[#4ecdc4] px-3 py-2 text-xs font-black uppercase shadow-[4px_4px_0_0_#111]"
+            className={`inline-flex items-center gap-2 border-4 border-[#111] bg-[#4ecdc4] px-3 py-2 text-xs font-black uppercase shadow-[4px_4px_0_0_#111] ${btnHover}`}
           >
             <Download className="h-4 w-4" strokeWidth={2} aria-hidden />
             Download app update
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             type="button"
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => void window.omnidl.updaterQuitAndInstall()}
-            className="inline-flex items-center gap-2 border-4 border-[#111] bg-[#ff6b6b] px-3 py-2 text-xs font-black uppercase text-white shadow-[4px_4px_0_0_#111]"
+            className={`inline-flex items-center gap-2 border-4 border-[#111] bg-[#ff6b6b] px-3 py-2 text-xs font-black uppercase text-white shadow-[4px_4px_0_0_#111] ${btnHover}`}
           >
             Restart & install
-          </button>
+          </motion.button>
         </div>
       </BrutalPanel>
     </div>

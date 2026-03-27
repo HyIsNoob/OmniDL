@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { History, Home, Layers, ListVideo, Settings } from "lucide-react";
+import { DownloadCompleteModal } from "./components/DownloadCompleteModal";
 import { TransitionOverlay } from "./components/TransitionOverlay";
 import { Home as HomePage } from "./pages/Home";
 import { Queue } from "./pages/Queue";
@@ -10,7 +11,7 @@ import { Options } from "./pages/Options";
 import { useAppStore } from "./store/app";
 import { useHomeUrlStore } from "./store/homeUrl";
 import { useSettingsStore } from "./store/settingsUi";
-import { looksLikeYoutubePlaylistOnlyUrl, looksLikeYtOrTiktok } from "./lib/url";
+import { extractFirstYtOrTiktokVideoUrl } from "./lib/url";
 import type { TabId } from "@shared/ipc";
 
 const tabs: Array<{
@@ -37,6 +38,7 @@ export default function App() {
   const clipboardWatch = useSettingsStore((s) => s.clipboardWatch);
   const hydrate = useSettingsStore((s) => s.hydrate);
   const [appVersion, setAppVersion] = useState("");
+  const [downloadDone, setDownloadDone] = useState<{ title: string; path: string } | null>(null);
 
   useEffect(() => {
     void hydrate();
@@ -53,9 +55,7 @@ export default function App() {
 
   useEffect(() => {
     const off = window.omnidl.onDownloadDone((p) => {
-      if (confirm(`Download finished.\nOpen folder for:\n${p.title}?`)) {
-        void window.omnidl.showItemInFolder(p.path);
-      }
+      setDownloadDone({ title: p.title, path: p.path });
     });
     return off;
   }, []);
@@ -82,10 +82,11 @@ export default function App() {
     const id = window.setInterval(() => {
       void (async () => {
         const t = await window.omnidl.readClipboard();
-        if (!t || t === lastClip.current) return;
-        if (!looksLikeYtOrTiktok(t) || looksLikeYoutubePlaylistOnlyUrl(t)) return;
-        lastClip.current = t.trim();
-        setUrl(t.trim());
+        if (!t) return;
+        const extracted = extractFirstYtOrTiktokVideoUrl(t);
+        if (!extracted || extracted === lastClip.current) return;
+        lastClip.current = extracted;
+        setUrl(extracted);
         setTab("home");
       })();
     }, 600);
@@ -94,6 +95,18 @@ export default function App() {
 
   return (
     <div className="flex h-screen min-h-0 bg-[#e8dcc8] text-[#111]">
+      <DownloadCompleteModal
+        open={downloadDone != null}
+        title={downloadDone?.title ?? ""}
+        filePath={downloadDone?.path ?? ""}
+        onPlay={() => {
+          if (downloadDone?.path) void window.omnidl.openPath(downloadDone.path);
+        }}
+        onOpenFolder={() => {
+          if (downloadDone?.path) void window.omnidl.showItemInFolder(downloadDone.path);
+        }}
+        onDone={() => setDownloadDone(null)}
+      />
       <TransitionOverlay active={overlayOn} sweep={sweep} label={transitionLabel} />
 
       <aside className="relative z-10 flex w-[260px] shrink-0 flex-col border-r-4 border-[#111] bg-[#111] text-[#faf8f3] shadow-[6px_0_0_0_rgba(0,0,0,0.12)]">
@@ -169,10 +182,10 @@ export default function App() {
               <motion.div
                 key={tab}
                 role="tabpanel"
-                initial={{ opacity: 0, y: sweep === "down" ? -10 : 10 }}
+                initial={false}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: sweep === "down" ? -10 : 10 }}
-                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                exit={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
               >
                 {tab === "home" && <HomePage url={url} setUrl={setUrl} />}
                 {tab === "queue" && <Queue />}

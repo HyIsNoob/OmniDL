@@ -1,11 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { Notification, type BrowserWindow } from "electron";
+import { Notification, app, type BrowserWindow } from "electron";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
-import { historyAdd } from "./db.js";
+import { historyAdd, settingsGet } from "./db.js";
+import { downloadThumbnail } from "./thumbnail.js";
 import { runYtdlpDownload, type DownloadProgress } from "./ytdlp.js";
 import type { DownloadKind, QueueJob, QueueState } from "../../shared/ipc.js";
+
+function shouldShowOsPush(): boolean {
+  return settingsGet("notificationsPush") !== "0";
+}
 
 let targetWindow: BrowserWindow | null = null;
 const jobs: QueueJob[] = [];
@@ -61,6 +66,8 @@ function buildArgs(job: QueueJob): string[] {
     "--continue",
     "--merge-output-format",
     "mp4",
+    "--postprocessor-args",
+    "ffmpeg:-c:v copy -c:a aac -b:a 192k",
     "-o",
     out,
     job.url,
@@ -102,8 +109,17 @@ async function runJob(job: QueueJob): Promise<void> {
     } else {
       job.outputPath = job.outputDir;
     }
+    const recordId = randomUUID();
+    let thumbnailPath: string | null = null;
+    if (job.kind === "video" && job.thumbnailUrl) {
+      const dest = join(app.getPath("userData"), "thumbnails", `${recordId}.jpg`);
+      const ok = await downloadThumbnail(job.thumbnailUrl, dest);
+      if (ok && existsSync(dest)) {
+        thumbnailPath = dest;
+      }
+    }
     historyAdd({
-      id: randomUUID(),
+      id: recordId,
       url: job.url,
       title: job.title,
       platform: job.platform ?? "unknown",
@@ -111,8 +127,9 @@ async function runJob(job: QueueJob): Promise<void> {
       quality: job.formatLabel,
       kind: job.kind,
       createdAt: Date.now(),
+      thumbnailPath,
     });
-    if (Notification.isSupported()) {
+    if (shouldShowOsPush() && Notification.isSupported()) {
       new Notification({ title: "Download complete", body: job.title }).show();
     }
     if (targetWindow && !targetWindow.isDestroyed()) {
@@ -151,6 +168,7 @@ export function addJob(payload: {
   outputDir: string;
   kind: DownloadKind;
   platform?: string;
+  thumbnailUrl?: string;
   mode: "next" | "end";
 }): QueueJob {
   const job: QueueJob = {
@@ -163,6 +181,7 @@ export function addJob(payload: {
     outputTemplate: "%(title)s [%(id)s].%(ext)s",
     kind: payload.kind,
     platform: payload.platform,
+    thumbnailUrl: payload.thumbnailUrl,
     status: "pending",
     progress: 0,
   };

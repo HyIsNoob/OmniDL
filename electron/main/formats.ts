@@ -48,6 +48,57 @@ function platformFrom(info: RawInfo): VideoMetaDisplay["platform"] {
   return "unknown";
 }
 
+function videoTracksForEstimate(formats: RawFormat[]): RawFormat[] {
+  const dashVideo = formats.filter(
+    (f) =>
+      f.vcodec &&
+      f.vcodec !== "none" &&
+      f.height &&
+      (!f.acodec || f.acodec === "none"),
+  );
+  if (dashVideo.length) return dashVideo;
+  return formats.filter((f) => f.vcodec && f.vcodec !== "none" && f.height);
+}
+
+function audioTracksForEstimate(formats: RawFormat[]): RawFormat[] {
+  const onlyA = formats.filter(
+    (f) => f.acodec && f.acodec !== "none" && (!f.vcodec || f.vcodec === "none"),
+  );
+  if (onlyA.length) return onlyA;
+  return formats.filter((f) => f.acodec && f.acodec !== "none");
+}
+
+function bytesFromBitrateKbps(br: number | undefined, duration: number): number | null {
+  if (br == null || br <= 0 || !Number.isFinite(br)) return null;
+  return Math.round((br * 1000 * duration) / 8);
+}
+
+function pickVideoStreamBytes(f: RawFormat, duration: number): number | null {
+  const br = f.vbr ?? f.tbr;
+  const fromBitrate = bytesFromBitrateKbps(br, duration);
+  const fromSize = f.filesize_approx ?? f.filesize ?? null;
+  if (fromBitrate != null && fromSize != null && fromSize > 0) {
+    if (fromSize < fromBitrate * 0.25) return fromBitrate;
+    return Math.max(fromSize, fromBitrate);
+  }
+  if (fromBitrate != null) return fromBitrate;
+  if (fromSize != null && fromSize > 0) return fromSize;
+  return null;
+}
+
+function pickAudioStreamBytes(f: RawFormat, duration: number): number | null {
+  const br = f.abr ?? f.tbr;
+  const fromBitrate = bytesFromBitrateKbps(br, duration);
+  const fromSize = f.filesize_approx ?? f.filesize ?? null;
+  if (fromBitrate != null && fromSize != null && fromSize > 0) {
+    if (fromSize < fromBitrate * 0.25) return fromBitrate;
+    return Math.max(fromSize, fromBitrate);
+  }
+  if (fromBitrate != null) return fromBitrate;
+  if (fromSize != null && fromSize > 0) return fromSize;
+  return null;
+}
+
 function estimateBytes(
   duration: number | null | undefined,
   formats: RawFormat[] | undefined,
@@ -61,62 +112,58 @@ function estimateBytes(
     selector.includes("bestaudio") ||
     selector === "ba/b";
   if (audioOnly) {
-    const aud = formats
-      .filter((f) => f.acodec && f.acodec !== "none" && (!f.vcodec || f.vcodec === "none"))
-      .sort((a, b) => (b.abr ?? 0) - (a.abr ?? 0))[0];
-    if (aud?.filesize) return { bytes: aud.filesize, isEstimate: false };
-    if (aud?.filesize_approx) return { bytes: aud.filesize_approx, isEstimate: true };
-    if (aud?.abr) return { bytes: Math.round((aud.abr * 1000 * duration) / 8), isEstimate: true };
-    return { bytes: null, isEstimate: true };
+    const aud = audioTracksForEstimate(formats).sort((a, b) => (b.abr ?? 0) - (a.abr ?? 0))[0];
+    if (!aud) return { bytes: null, isEstimate: true };
+    const b = pickAudioStreamBytes(aud, duration);
+    if (b == null) return { bytes: null, isEstimate: true };
+    return {
+      bytes: b,
+      isEstimate: aud.filesize == null && aud.filesize_approx == null,
+    };
   }
   let best: RawFormat | undefined;
   const hMatch = /height<=(\d+)/.exec(selector);
   const cap = hMatch ? Number(hMatch[1]) : undefined;
-  const vids = formats.filter((f) => f.vcodec && f.vcodec !== "none" && f.height);
+  const vids = videoTracksForEstimate(formats);
   if (cap != null && !Number.isNaN(cap)) {
     const pool = vids.filter((f) => (f.height ?? 0) <= cap);
     best = pool.sort((a, b) => (b.height ?? 0) - (a.height ?? 0))[0];
   } else {
     best = vids.sort((a, b) => (b.height ?? 0) - (a.height ?? 0))[0];
   }
-  const aud = formats
-    .filter((f) => f.acodec && f.acodec !== "none" && (!f.vcodec || f.vcodec === "none"))
-    .sort((a, b) => (b.abr ?? 0) - (a.abr ?? 0))[0];
+  const aud = audioTracksForEstimate(formats).sort((a, b) => (b.abr ?? 0) - (a.abr ?? 0))[0];
   let total = 0;
   let has = false;
-  if (best?.filesize) {
-    total += best.filesize;
-    has = true;
-  } else if (best?.filesize_approx) {
-    total += best.filesize_approx;
-    has = true;
-  } else if (best?.tbr) {
-    total += (best.tbr * 1000 * duration) / 8;
-    has = true;
+  if (best) {
+    const vb = pickVideoStreamBytes(best, duration);
+    if (vb != null) {
+      total += vb;
+      has = true;
+    }
   }
   if (!audioOnly && (selector.includes("+ba") || selector.includes("+bestaudio"))) {
-    if (aud?.filesize) {
-      total += aud.filesize;
-      has = true;
-    } else if (aud?.filesize_approx) {
-      total += aud.filesize_approx;
-      has = true;
-    } else if (aud?.abr) {
-      total += (aud.abr * 1000 * duration) / 8;
-      has = true;
+    if (aud) {
+      const ab = pickAudioStreamBytes(aud, duration);
+      if (ab != null) {
+        total += ab;
+        has = true;
+      }
     }
   }
   if (!has) {
     return { bytes: null, isEstimate: true };
   }
-  return { bytes: Math.round(total), isEstimate: !(best?.filesize && (!aud || aud.filesize)) };
+  return {
+    bytes: Math.round(total),
+    isEstimate: true,
+  };
 }
 
 export function buildVideoPayload(jsonText: string): VideoInfoPayload {
   const info = JSON.parse(jsonText) as RawInfo;
   const formats = info.formats ?? [];
   const duration = info.duration ?? null;
-  const vids = formats.filter((f) => f.vcodec && f.vcodec !== "none" && f.height);
+  const vids = videoTracksForEstimate(formats);
   const maxHeight = vids.length ? Math.max(...vids.map((f) => f.height ?? 0)) : 0;
 
   const meta: VideoMetaDisplay = {
@@ -133,7 +180,7 @@ export function buildVideoPayload(jsonText: string): VideoInfoPayload {
 
   const options: FormatOption[] = [];
 
-  const bestVidSel = "bv*+ba/b";
+  const bestVidSel = "bestvideo+bestaudio/best";
   const bestVidEst = estimateBytes(duration, formats, bestVidSel);
   options.push({
     id: "best-video",

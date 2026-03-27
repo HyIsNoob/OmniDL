@@ -54,6 +54,11 @@ export async function initDatabase(userData: string): Promise<void> {
       created_at INTEGER NOT NULL
     );
   `);
+  try {
+    db.run("ALTER TABLE history ADD COLUMN thumbnail_path TEXT");
+  } catch {
+    /* already migrated */
+  }
   persist();
 }
 
@@ -95,10 +100,11 @@ export function historyList(): Array<{
   quality: string;
   kind: string;
   createdAt: number;
+  thumbnailPath: string | null;
 }> {
   const d = getDb();
   const stmt = d.prepare(
-    "SELECT id, url, title, platform, media_path, quality, kind, created_at FROM history ORDER BY created_at DESC",
+    "SELECT id, url, title, platform, media_path, quality, kind, created_at, thumbnail_path FROM history ORDER BY created_at DESC",
   );
   const out: Array<{
     id: string;
@@ -109,6 +115,7 @@ export function historyList(): Array<{
     quality: string;
     kind: string;
     createdAt: number;
+    thumbnailPath: string | null;
   }> = [];
   while (stmt.step()) {
     const r = stmt.getAsObject() as Record<string, unknown>;
@@ -121,6 +128,7 @@ export function historyList(): Array<{
       quality: String(r.quality ?? ""),
       kind: String(r.kind),
       createdAt: Number(r.created_at),
+      thumbnailPath: r.thumbnail_path != null ? String(r.thumbnail_path) : null,
     });
   }
   stmt.free();
@@ -136,10 +144,11 @@ export function historyAdd(row: {
   quality: string;
   kind: string;
   createdAt: number;
+  thumbnailPath: string | null;
 }): void {
   getDb().run(
-    `INSERT OR REPLACE INTO history (id, url, title, platform, media_path, quality, kind, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT OR REPLACE INTO history (id, url, title, platform, media_path, quality, kind, created_at, thumbnail_path)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       row.id,
       row.url,
@@ -149,6 +158,7 @@ export function historyAdd(row: {
       row.quality,
       row.kind,
       row.createdAt,
+      row.thumbnailPath,
     ],
   );
   persist();
