@@ -2,7 +2,7 @@ import { app, clipboard, dialog, ipcMain, shell } from "electron";
 import { autoUpdater } from "./updater.js";
 import { existsSync, readFileSync, unlinkSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import { buildPlaylistPayload, buildVideoPayload } from "./formats.js";
+import { buildPlaylistPayload, buildVideoPayload, thumbnailFromVideoJson } from "./formats.js";
 import {
   historyClear,
   historyList,
@@ -14,8 +14,10 @@ import {
   addJob,
   cancelJob,
   clearCompleted,
+  duplicateChoiceFromRenderer,
   getQueueState,
   pauseJob,
+  removeJob,
   resumeJob,
 } from "./queue.js";
 import { normalizeVideoUrl } from "./url.js";
@@ -25,7 +27,7 @@ import {
   getLocalYtdlpVersion,
   runYtdlp,
 } from "./ytdlp.js";
-import type { HistoryRow } from "../../shared/ipc.js";
+import type { DuplicateChoice, HistoryRow } from "../../shared/ipc.js";
 
 export function registerIpc(isDev: boolean): void {
   ipcMain.handle("app:getVersion", () => app.getVersion());
@@ -63,6 +65,24 @@ export function registerIpc(isDev: boolean): void {
       );
       if (code !== 0) throw new Error(stderr || `yt-dlp failed (${code})`);
       return buildPlaylistPayload(stdout);
+    },
+  );
+
+  ipcMain.handle("yt:fetchVideoThumb", async (_e, rawUrl: string) => {
+    const url = rawUrl.trim();
+    if (!url) return null;
+    const { stdout, code } = await runYtdlp(
+      ["-J", "--no-playlist", "--no-warnings", url],
+      { maxBuffer: 40 * 1024 * 1024 },
+    );
+    if (code !== 0) return null;
+    return thumbnailFromVideoJson(stdout);
+  });
+
+  ipcMain.on(
+    "duplicate:respond",
+    (_e, p: { jobId: string; choice: DuplicateChoice }) => {
+      duplicateChoiceFromRenderer(p.jobId, p.choice);
     },
   );
 
@@ -107,6 +127,7 @@ export function registerIpc(isDev: boolean): void {
   ipcMain.handle("queue:resume", (_e, id: string) => resumeJob(id));
   ipcMain.handle("queue:cancel", (_e, id: string) => cancelJob(id));
   ipcMain.handle("queue:clearCompleted", () => clearCompleted());
+  ipcMain.handle("queue:remove", (_e, id: string) => removeJob(id));
 
   ipcMain.handle("settings:get", (_e, key: string) => settingsGet(key));
   ipcMain.handle("settings:set", (_e, key: string, value: string) => {

@@ -173,3 +173,26 @@ export function historyClear(): void {
   getDb().run("DELETE FROM history");
   persist();
 }
+
+export function historyUrlExists(url: string): boolean {
+  const stmt = getDb().prepare("SELECT 1 FROM history WHERE url = ? LIMIT 1");
+  stmt.bind([url]);
+  const ok = stmt.step();
+  stmt.free();
+  return ok;
+}
+
+export function historyGetMediaPathByUrl(url: string): string | null {
+  const stmt = getDb().prepare(
+    "SELECT media_path FROM history WHERE url = ? ORDER BY created_at DESC LIMIT 1",
+  );
+  stmt.bind([url]);
+  if (!stmt.step()) {
+    stmt.free();
+    return null;
+  }
+  const row = stmt.getAsObject() as { media_path?: string };
+  stmt.free();
+  const p = row.media_path;
+  return typeof p === "string" && p.length > 0 ? p : null;
+}

@@ -1,5 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type {
+  DuplicateAskPayload,
+  DuplicateChoice,
   HistoryRow,
   PlaylistInfoPayload,
   QueueJob,
@@ -17,6 +19,11 @@ const api = {
   fetchVideo: (url: string) => ipcRenderer.invoke("yt:fetchVideo", url) as Promise<VideoInfoPayload>,
   fetchPlaylist: (url: string, limit: number) =>
     ipcRenderer.invoke("yt:fetchPlaylist", { url, limit }) as Promise<PlaylistInfoPayload>,
+  fetchVideoThumb: (url: string) =>
+    ipcRenderer.invoke("yt:fetchVideoThumb", url) as Promise<string | null>,
+  duplicateRespond: (p: { jobId: string; choice: DuplicateChoice }) => {
+    ipcRenderer.send("duplicate:respond", p);
+  },
   queueGetState: () => ipcRenderer.invoke("queue:getState") as Promise<QueueState>,
   queueAddDownload: (payload: {
     url: string;
@@ -42,6 +49,7 @@ const api = {
   queueResume: (id: string) => ipcRenderer.invoke("queue:resume", id),
   queueCancel: (id: string) => ipcRenderer.invoke("queue:cancel", id),
   queueClearCompleted: () => ipcRenderer.invoke("queue:clearCompleted"),
+  queueRemove: (id: string) => ipcRenderer.invoke("queue:remove", id),
   settingsGet: (key: string) => ipcRenderer.invoke("settings:get", key) as Promise<string | null>,
   settingsSet: (key: string, value: string) => ipcRenderer.invoke("settings:set", key, value),
   historyList: () => ipcRenderer.invoke("history:list") as Promise<HistoryRow[]>,
@@ -65,6 +73,11 @@ const api = {
     const fn = (_: unknown, p: { title: string; path: string }) => cb(p);
     ipcRenderer.on("download:done", fn);
     return () => ipcRenderer.removeListener("download:done", fn);
+  },
+  onDuplicateAsk: (cb: (p: DuplicateAskPayload) => void) => {
+    const fn = (_: unknown, p: DuplicateAskPayload) => cb(p);
+    ipcRenderer.on("duplicate:ask", fn);
+    return () => ipcRenderer.removeListener("duplicate:ask", fn);
   },
   onUpdaterAvailable: (cb: (p: { version: string }) => void) => {
     const fn = (_: unknown, p: { version: string }) => cb(p);

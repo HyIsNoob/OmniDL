@@ -31,6 +31,7 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
   const [kind, setKind] = useState<"video" | "audio">("video");
   const [outDir, setOutDir] = useState<string>("");
   const [trackedJob, setTrackedJob] = useState<QueueJob | null>(null);
+  const [audioSel, setAudioSel] = useState<string>("best-audio");
   const [quickHint, setQuickHint] = useState<string | null>(null);
 
   const flashHint = useCallback((msg: string) => {
@@ -97,6 +98,7 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
       const first =
         data.options.find((o) => o.id === "best-video") ?? data.options[0] ?? null;
       setSel(first);
+      setAudioSel("best-audio");
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -125,10 +127,21 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
   const selectedOption = useMemo(() => {
     if (!info) return null;
     if (kind === "audio") {
-      return info.options.find((o) => o.id === "best-audio") ?? null;
+      return (
+        info.options.find((o) => o.id === audioSel) ??
+        info.options.find((o) => o.id === "best-audio") ??
+        null
+      );
     }
     return sel;
-  }, [info, kind, sel]);
+  }, [info, kind, sel, audioSel]);
+
+  const audioOptions = useMemo(() => {
+    if (!info) return [];
+    return info.options.filter(
+      (o) => o.id === "best-audio" || o.id === "audio-128" || o.id === "audio-320",
+    );
+  }, [info]);
 
   const enqueue = async (mode: "next" | "end") => {
     if (!info || !selectedOption || !outDir) return;
@@ -340,11 +353,44 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
                     </motion.p>
                   ) : null}
                 </AnimatePresence>
+                {trackedJob &&
+                  (trackedJob.status === "downloading" ||
+                    trackedJob.status === "pending" ||
+                    trackedJob.status === "paused") && (
+                    <div className="mt-4 border-4 border-[#111] bg-[#fffef8] p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-black uppercase">
+                        <span>
+                          {trackedJob.status === "pending"
+                            ? "Queued"
+                            : trackedJob.status === "paused"
+                              ? "Paused"
+                              : "Downloading"}
+                        </span>
+                        {trackedJob.status === "downloading" ? (
+                          <span className="font-mono text-[10px] font-bold text-neutral-600">
+                            {trackedJob.speed ?? ""}
+                            {trackedJob.eta ? ` · ETA ${trackedJob.eta}` : ""}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="mt-2 h-5 w-full overflow-hidden border-4 border-[#111] bg-neutral-200">
+                        <motion.div
+                          className="h-full bg-[#4ecdc4]"
+                          initial={false}
+                          animate={{ width: `${Math.min(100, Math.max(0, trackedJob.progress))}%` }}
+                          transition={{ type: "spring", stiffness: 140, damping: 24 }}
+                        />
+                      </div>
+                      <div className="mt-1 text-right font-mono text-[10px] font-bold text-neutral-600">
+                        {Math.round(trackedJob.progress)}%
+                      </div>
+                    </div>
+                  )}
               </BrutalPanel>
             </motion.div>
 
             <motion.div variants={infoBlock} className="contents">
-              <BrutalPanel className="p-5">
+              <BrutalPanel className="min-w-0 p-5">
             <div className="flex gap-2">
               <motion.button
                 type="button"
@@ -375,7 +421,9 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
             {kind === "video" && (
               <ul className="mt-3 max-h-64 space-y-2 overflow-auto pr-1">
                 {info.options
-                  .filter((o) => o.id !== "best-audio")
+                  .filter(
+                    (o) => o.id !== "best-audio" && o.id !== "audio-128" && o.id !== "audio-320",
+                  )
                   .map((o) => (
                     <li key={o.id}>
                       <motion.label
@@ -403,12 +451,31 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
             )}
 
             {kind === "audio" && (
-              <div className="mt-3 border-4 border-[#111] bg-white px-3 py-2 text-sm font-bold">
-                Best audio
-                <div className="text-xs font-semibold text-neutral-600">
-                  {formatBytes(info.options.find((x) => x.id === "best-audio")?.estimatedBytes ?? null)}
-                </div>
-              </div>
+              <ul className="mt-3 max-h-64 space-y-2 overflow-auto pr-1">
+                {audioOptions.map((o) => (
+                  <li key={o.id}>
+                    <motion.label
+                      whileHover={{ x: 2 }}
+                      transition={{ duration: 0.15 }}
+                      className="flex cursor-pointer items-center justify-between gap-2 border-4 border-[#111] bg-white px-3 py-2 text-sm font-bold"
+                    >
+                      <span className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="fmt-audio"
+                          checked={audioSel === o.id}
+                          onChange={() => setAudioSel(o.id)}
+                        />
+                        {o.label}
+                      </span>
+                      <span className="text-xs text-neutral-600">
+                        {formatBytes(o.estimatedBytes)}
+                        {o.isEstimate ? " (est.)" : ""}
+                      </span>
+                    </motion.label>
+                  </li>
+                ))}
+              </ul>
             )}
 
             <div className="mt-4">
@@ -433,50 +500,16 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
               </div>
             </div>
 
-            {trackedJob &&
-              (trackedJob.status === "downloading" ||
-                trackedJob.status === "pending" ||
-                trackedJob.status === "paused") && (
-                <div className="mt-4 border-4 border-[#111] bg-[#fffef8] p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-black uppercase">
-                    <span>
-                      {trackedJob.status === "pending"
-                        ? "Queued"
-                        : trackedJob.status === "paused"
-                          ? "Paused"
-                          : "Downloading"}
-                    </span>
-                    {trackedJob.status === "downloading" ? (
-                      <span className="font-mono text-[10px] font-bold text-neutral-600">
-                        {trackedJob.speed ?? ""}
-                        {trackedJob.eta ? ` · ETA ${trackedJob.eta}` : ""}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="mt-2 h-5 w-full overflow-hidden border-4 border-[#111] bg-neutral-200">
-                    <motion.div
-                      className="h-full bg-[#4ecdc4]"
-                      initial={false}
-                      animate={{ width: `${Math.min(100, Math.max(0, trackedJob.progress))}%` }}
-                      transition={{ type: "spring", stiffness: 140, damping: 24 }}
-                    />
-                  </div>
-                  <div className="mt-1 text-right font-mono text-[10px] font-bold text-neutral-600">
-                    {Math.round(trackedJob.progress)}%
-                  </div>
-                </div>
-              )}
-
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-4 flex w-full min-w-0 gap-2">
               <motion.button
                 type="button"
                 disabled={!selectedOption || !outDir}
                 onClick={() => void enqueue("next")}
                 whileHover={selectedOption && outDir ? { y: -2 } : undefined}
                 whileTap={selectedOption && outDir ? { scale: 0.98 } : undefined}
-                className={`inline-flex items-center gap-2 border-4 border-[#111] bg-[#ff6b6b] px-4 py-2.5 font-black uppercase text-white shadow-[4px_4px_0_0_#111] disabled:opacity-50 ${btnMotion}`}
+                className={`flex min-w-0 flex-1 items-center justify-center gap-2 border-4 border-[#111] bg-[#ff6b6b] px-3 py-2.5 font-black uppercase text-white shadow-[4px_4px_0_0_#111] disabled:opacity-50 ${btnMotion}`}
               >
-                <Download className="h-5 w-5" strokeWidth={2} aria-hidden />
+                <Download className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
                 Download
               </motion.button>
               <motion.button
@@ -485,9 +518,9 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
                 onClick={() => void enqueue("end")}
                 whileHover={selectedOption && outDir ? { y: -2 } : undefined}
                 whileTap={selectedOption && outDir ? { scale: 0.98 } : undefined}
-                className={`inline-flex items-center gap-2 border-4 border-[#111] bg-white px-4 py-2.5 font-black uppercase shadow-[4px_4px_0_0_#111] disabled:opacity-50 ${btnMotion}`}
+                className={`flex min-w-0 flex-1 items-center justify-center gap-2 border-4 border-[#111] bg-white px-3 py-2.5 font-black uppercase shadow-[4px_4px_0_0_#111] disabled:opacity-50 ${btnMotion}`}
               >
-                <Layers className="h-5 w-5" strokeWidth={2} aria-hidden />
+                <Layers className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
                 Add to queue
               </motion.button>
             </div>

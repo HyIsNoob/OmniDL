@@ -1,5 +1,14 @@
 export type TabId = "home" | "queue" | "playlist" | "history" | "options";
 
+export type DuplicateChoice = "redownload" | "open" | "cancel";
+
+export interface DuplicateAskPayload {
+  jobId: string;
+  predictedPath: string;
+  historyHit: boolean;
+  fileExists: boolean;
+}
+
 export type JobStatus =
   | "pending"
   | "downloading"
@@ -21,6 +30,8 @@ export interface QueueJob {
   kind: DownloadKind;
   platform?: string;
   thumbnailUrl?: string;
+  duplicateIndex?: number | null;
+  createdAt: number;
   status: JobStatus;
   progress: number;
   speed?: string;

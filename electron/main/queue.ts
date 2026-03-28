@@ -1,12 +1,22 @@
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { Notification, app, type BrowserWindow } from "electron";
+import { Notification, app, shell, type BrowserWindow } from "electron";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
-import { historyAdd, settingsGet } from "./db.js";
+import {
+  historyAdd,
+  historyGetMediaPathByUrl,
+  historyUrlExists,
+  settingsGet,
+} from "./db.js";
 import { downloadThumbnail } from "./thumbnail.js";
-import { runYtdlpDownload, type DownloadProgress } from "./ytdlp.js";
-import type { DownloadKind, QueueJob, QueueState } from "../../shared/ipc.js";
+import { runYtdlp, runYtdlpDownload, type DownloadProgress } from "./ytdlp.js";
+import type {
+  DuplicateChoice,
+  DownloadKind,
+  QueueJob,
+  QueueState,
+} from "../../shared/ipc.js";
 
 function shouldShowOsPush(): boolean {
   return settingsGet("notificationsPush") !== "0";
@@ -20,10 +30,14 @@ export function setQueueWindow(win: BrowserWindow | null): void {
   targetWindow = win;
 }
 
+function sortedJobs(): QueueJob[] {
+  return [...jobs].sort((a, b) => b.createdAt - a.createdAt);
+}
+
 function pushState(): void {
   const state: QueueState = {
     activeId: jobs.find((j) => j.status === "downloading")?.id ?? null,
-    jobs: jobs.map((j) => ({ ...j })),
+    jobs: sortedJobs().map((j) => ({ ...j })),
   };
   if (targetWindow && !targetWindow.isDestroyed()) {
     targetWindow.webContents.send("queue:update", state);
@@ -42,19 +56,42 @@ function findOutputPath(stderr: string): string | undefined {
   return undefined;
 }
 
-function buildArgs(job: QueueJob): string[] {
-  const out = join(job.outputDir, "%(title)s [%(id)s].%(ext)s");
+function omniSlugForFilename(job: QueueJob): string {
+  let label = job.formatLabel.replace(/\s+/g, "-").replace(/[/\\:*?"<>|]/g, "").replace(/-+/g, "-");
+  if (!label) label = "media";
+  return label;
+}
+
+function outputTemplateFor(job: QueueJob): string {
+  const slug = omniSlugForFilename(job);
+  if (job.duplicateIndex != null && job.duplicateIndex > 0) {
+    return `OmniDL_(${slug})_%(title)s [%(id)s] (${job.duplicateIndex}).%(ext)s`;
+  }
+  return `OmniDL_(${slug})_%(title)s [%(id)s].%(ext)s`;
+}
+
+let pendingDuplicate: { jobId: string; resolve: (c: DuplicateChoice) => void } | null = null;
+
+export function duplicateChoiceFromRenderer(jobId: string, choice: DuplicateChoice): void {
+  if (!pendingDuplicate || pendingDuplicate.jobId !== jobId) return;
+  pendingDuplicate.resolve(choice);
+  pendingDuplicate = null;
+}
+
+function ytdlpFormatArgs(job: QueueJob): string[] {
   if (job.kind === "audio") {
     return [
       "-f",
       job.formatSelector,
+      "-x",
+      "--audio-format",
+      "m4a",
+      "--audio-quality",
+      "0",
       "--no-warnings",
       "--newline",
       "--no-playlist",
       "--continue",
-      "-o",
-      out,
-      job.url,
     ];
   }
   return [
@@ -66,15 +103,106 @@ function buildArgs(job: QueueJob): string[] {
     "--continue",
     "--merge-output-format",
     "mp4",
-    "--postprocessor-args",
-    "ffmpeg:-c:v copy -c:a aac -b:a 192k",
-    "-o",
-    out,
-    job.url,
   ];
 }
 
+async function predictOutputPath(job: QueueJob): Promise<string | null> {
+  try {
+    const out = join(job.outputDir, outputTemplateFor(job));
+    const { stdout, code } = await runYtdlp(
+      [
+        ...ytdlpFormatArgs(job),
+        "-o",
+        out,
+        "--print",
+        "%(filepath)s",
+        "--skip-download",
+        job.url,
+      ],
+      { maxBuffer: 20 * 1024 * 1024 },
+    );
+    if (code !== 0) return null;
+    const lines = stdout.trim().split(/\r?\n/).filter(Boolean);
+    const last = lines[lines.length - 1]?.trim();
+    return last && last.length > 0 ? last : null;
+  } catch {
+    return null;
+  }
+}
+
+async function resolveDuplicate(job: QueueJob): Promise<"proceed" | "skip" | "abort"> {
+  const predicted = await predictOutputPath(job);
+  const hist = historyUrlExists(job.url);
+  const fileExists = predicted != null && existsSync(predicted);
+  if (!hist && !fileExists) return "proceed";
+
+  const openTarget =
+    fileExists && predicted
+      ? predicted
+      : historyGetMediaPathByUrl(job.url) ?? (predicted ?? undefined);
+
+  if (!targetWindow || targetWindow.isDestroyed()) {
+    return "abort";
+  }
+
+  const choice = await new Promise<DuplicateChoice>((resolve) => {
+    pendingDuplicate = { jobId: job.id, resolve };
+    targetWindow!.webContents.send("duplicate:ask", {
+      jobId: job.id,
+      predictedPath: predicted ?? "",
+      historyHit: hist,
+      fileExists,
+    });
+  });
+
+  if (choice === "cancel") return "abort";
+  if (choice === "open") {
+    if (openTarget && existsSync(openTarget)) {
+      shell.showItemInFolder(openTarget);
+    }
+    return "skip";
+  }
+  job.duplicateIndex = 1;
+  return "proceed";
+}
+
+function buildArgs(job: QueueJob): string[] {
+  const out = join(job.outputDir, outputTemplateFor(job));
+  if (job.kind === "audio") {
+    return [
+      ...ytdlpFormatArgs(job),
+      "-o",
+      out,
+      job.url,
+    ];
+  }
+  return [...ytdlpFormatArgs(job), "-o", out, job.url];
+}
+
+function removeJobFromQueue(job: QueueJob): void {
+  const idx = jobs.indexOf(job);
+  if (idx >= 0) jobs.splice(idx, 1);
+}
+
 async function runJob(job: QueueJob): Promise<void> {
+  if (!jobs.includes(job)) return;
+  const dup = await resolveDuplicate(job);
+  if (!jobs.includes(job)) return;
+  if (dup === "abort") {
+    job.status = "error";
+    job.error = "Cancelled";
+    removeJobFromQueue(job);
+    pushState();
+    void pump();
+    return;
+  }
+  if (dup === "skip") {
+    removeJobFromQueue(job);
+    pushState();
+    void pump();
+    return;
+  }
+
   job.status = "downloading";
   job.progress = 0;
   job.speed = undefined;
@@ -92,6 +220,10 @@ async function runJob(job: QueueJob): Promise<void> {
   activeChild = child;
   try {
     const { code, stderr } = await promise;
+    if (!jobs.includes(job)) {
+      void pump();
+      return;
+    }
     if (job.status === "cancelled") return;
     if (job.status === "paused") return;
     if (code !== 0) {
@@ -156,7 +288,7 @@ async function pump(): Promise<void> {
 export function getQueueState(): QueueState {
   return {
     activeId: jobs.find((j) => j.status === "downloading")?.id ?? null,
-    jobs: jobs.map((j) => ({ ...j })),
+    jobs: sortedJobs().map((j) => ({ ...j })),
   };
 }
 
@@ -171,20 +303,24 @@ export function addJob(payload: {
   thumbnailUrl?: string;
   mode: "next" | "end";
 }): QueueJob {
+  const id = randomUUID();
   const job: QueueJob = {
-    id: randomUUID(),
+    id,
     url: payload.url,
     title: payload.title,
     formatLabel: payload.formatLabel,
     formatSelector: payload.formatSelector,
     outputDir: payload.outputDir,
-    outputTemplate: "%(title)s [%(id)s].%(ext)s",
+    outputTemplate: "",
     kind: payload.kind,
     platform: payload.platform,
     thumbnailUrl: payload.thumbnailUrl,
+    duplicateIndex: null,
+    createdAt: Date.now(),
     status: "pending",
     progress: 0,
   };
+  job.outputTemplate = outputTemplateFor(job);
   const active = jobs.some((j) => j.status === "downloading");
   if (!active) {
     jobs.push(job);
@@ -231,6 +367,19 @@ export function cancelJob(id: string): void {
   }
   const idx = jobs.indexOf(job);
   if (idx >= 0) jobs.splice(idx, 1);
+  void pump();
+  pushState();
+}
+
+export function removeJob(id: string): void {
+  const job = jobs.find((j) => j.id === id);
+  if (!job) return;
+  if (job.status === "downloading") {
+    job.status = "cancelled";
+    activeChild?.kill();
+    activeChild = null;
+  }
+  removeJobFromQueue(job);
   void pump();
   pushState();
 }

@@ -12,9 +12,11 @@ export function Options() {
   const clipboardWatch = useSettingsStore((s) => s.clipboardWatch);
   const autoFetch = useSettingsStore((s) => s.autoFetch);
   const notificationsPush = useSettingsStore((s) => s.notificationsPush);
+  const playlistFullThumbnails = useSettingsStore((s) => s.playlistFullThumbnails);
   const setClipboardWatch = useSettingsStore((s) => s.setClipboardWatch);
   const setAutoFetch = useSettingsStore((s) => s.setAutoFetch);
   const setNotificationsPush = useSettingsStore((s) => s.setNotificationsPush);
+  const setPlaylistFullThumbnails = useSettingsStore((s) => s.setPlaylistFullThumbnails);
   const [appV, setAppV] = useState("");
   const [ytV, setYtV] = useState<string | null>(null);
   const [remote, setRemote] = useState<string | null>(null);
@@ -47,7 +49,7 @@ export function Options() {
           Clipboard & fetch
         </div>
         <p className="mt-2 text-sm font-semibold text-neutral-600">
-          Bật phát hiện link trong clipboard: chỉ trích URL https (YouTube / TikTok) trong đoạn text rồi điền ô URL ở Home và chuyển tab Home. Bỏ qua URL chỉ trang playlist (playlist?list=…); link video có thêm &list= vẫn nhận. Tab Playlist không tự fetch từ clipboard. Auto-fetch gọi Fetch khi URL hợp lệ thay đổi ở Home.
+          Bật phát hiện link trong clipboard: trích URL https (YouTube / TikTok) trong đoạn text. Chỉ tab Home tự dán (kể cả khi vừa chuyển sang Home); tab Playlist không tự dán. Các tab khác không tự dán. Auto-fetch chỉ khi URL ở Home thay đổi.
         </p>
         <label className="mt-4 flex cursor-pointer items-start gap-3 border-4 border-[#111] bg-white p-3 font-bold transition-colors hover:bg-neutral-50">
           <input
@@ -59,7 +61,7 @@ export function Options() {
           <span>
             <span className="font-black uppercase">Detect clipboard</span>
             <span className="mt-1 block text-xs font-semibold text-neutral-600">
-              YouTube / TikTok — bỏ qua URL chỉ playlist; video (kể cả có &list=) vẫn dán vào Home
+              YouTube / TikTok — chỉ khi đang ở tab Home (link video và link playlist)
             </span>
           </span>
         </label>
@@ -74,6 +76,27 @@ export function Options() {
             <span className="font-black uppercase">Auto-fetch</span>
             <span className="mt-1 block text-xs font-semibold text-neutral-600">
               Tự fetch metadata sau khi URL thay đổi (debounce)
+            </span>
+          </span>
+        </label>
+      </BrutalPanel>
+
+      <BrutalPanel className="p-5">
+        <div className="text-lg font-black">Playlist</div>
+        <p className="mt-2 text-sm font-semibold text-neutral-600">
+          Sau khi tải danh sách playlist nhanh (flat), có thể tải lại thumbnail từng video để ảnh rõ hơn (chậm hơn, chạy nền).
+        </p>
+        <label className="mt-4 flex cursor-pointer items-start gap-3 border-4 border-[#111] bg-white p-3 font-bold transition-colors hover:bg-neutral-50">
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4"
+            checked={playlistFullThumbnails}
+            onChange={(e) => void setPlaylistFullThumbnails(e.target.checked)}
+          />
+          <span>
+            <span className="font-black uppercase">Full playlist thumbnails</span>
+            <span className="mt-1 block text-xs font-semibold text-neutral-600">
+              Sau Get playlist, tự fetch thumbnail HD từng mục và cập nhật dần trên lưới
             </span>
           </span>
         </label>

@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FolderOpen, Trash2 } from "lucide-react";
 import type { HistoryRow } from "@shared/ipc";
 import { BrutalPanel } from "../components/BrutalPanel";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { HistoryThumb } from "../components/HistoryThumb";
+
+const PAGE = 10;
 
 const btnHover =
   "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#111] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none";
@@ -17,6 +19,7 @@ type Pending =
 export function History() {
   const [rows, setRows] = useState<HistoryRow[]>([]);
   const [pending, setPending] = useState<Pending>(null);
+  const [page, setPage] = useState(1);
 
   const reload = useCallback(async () => {
     setRows(await window.omnidl.historyList());
@@ -25,6 +28,18 @@ export function History() {
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE));
+  const pageClamped = Math.min(Math.max(1, page), totalPages);
+  const slice = useMemo(() => {
+    const start = (pageClamped - 1) * PAGE;
+    return rows.slice(start, start + PAGE);
+  }, [rows, pageClamped]);
+
+  useEffect(() => {
+    const tp = Math.max(1, Math.ceil(rows.length / PAGE));
+    setPage((p) => Math.min(p, tp));
+  }, [rows.length]);
 
   return (
     <div className="space-y-5">
@@ -63,7 +78,7 @@ export function History() {
       )}
       <ul className="space-y-3">
         <AnimatePresence initial={false}>
-          {rows.map((h) => (
+          {slice.map((h) => (
             <motion.li
               key={h.id}
               layout
@@ -75,7 +90,7 @@ export function History() {
               <BrutalPanel className="p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex min-w-0 flex-1 gap-3">
-                    <HistoryThumb path={h.thumbnailPath} />
+                    <HistoryThumb path={h.thumbnailPath} kind={h.kind} />
                     <div className="min-w-0 flex-1">
                       <div className="font-black">{h.title}</div>
                       <div className="mt-1 break-all text-xs font-semibold text-neutral-600">{h.url}</div>
@@ -116,6 +131,29 @@ export function History() {
           ))}
         </AnimatePresence>
       </ul>
+      {rows.length > PAGE ? (
+        <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-black uppercase">
+          <button
+            type="button"
+            disabled={pageClamped <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            className="border-4 border-[#111] bg-white px-3 py-1.5 disabled:opacity-40"
+          >
+            Prev
+          </button>
+          <span className="text-neutral-600">
+            {pageClamped} / {totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={pageClamped >= totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            className="border-4 border-[#111] bg-white px-3 py-1.5 disabled:opacity-40"
+          >
+            Next
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

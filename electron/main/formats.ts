@@ -112,7 +112,20 @@ function estimateBytes(
     selector.includes("bestaudio") ||
     selector === "ba/b";
   if (audioOnly) {
-    const aud = audioTracksForEstimate(formats).sort((a, b) => (b.abr ?? 0) - (a.abr ?? 0))[0];
+    const abrCapMatch = /abr<=(\d+)/.exec(selector);
+    const abrCap = abrCapMatch ? Number(abrCapMatch[1]) : undefined;
+    let pool = audioTracksForEstimate(formats).sort((a, b) => (b.abr ?? 0) - (a.abr ?? 0));
+    if (abrCap != null && !Number.isNaN(abrCap)) {
+      const under = pool.filter((f) => (f.abr ?? 0) > 0 && (f.abr ?? 0) <= abrCap);
+      if (under.length) pool = under;
+      else {
+        const capBytes = bytesFromBitrateKbps(abrCap, duration);
+        if (capBytes != null) {
+          return { bytes: capBytes, isEstimate: true };
+        }
+      }
+    }
+    const aud = pool[0];
     if (!aud) return { bytes: null, isEstimate: true };
     const b = pickAudioStreamBytes(aud, duration);
     if (b == null) return { bytes: null, isEstimate: true };
@@ -205,8 +218,8 @@ export function buildVideoPayload(jsonText: string): VideoInfoPayload {
     });
   }
 
-  const bestAudSel = "ba/b";
-  const bestAudEst = estimateBytes(duration, formats, "ba");
+  const bestAudSel = "bestaudio/best";
+  const bestAudEst = estimateBytes(duration, formats, bestAudSel);
   options.push({
     id: "best-audio",
     label: "Best audio",
@@ -215,7 +228,36 @@ export function buildVideoPayload(jsonText: string): VideoInfoPayload {
     isEstimate: bestAudEst.isEstimate,
   });
 
+  const sel128 = "bestaudio[abr<=128]/bestaudio/worstaudio/best";
+  const est128 = estimateBytes(duration, formats, sel128);
+  options.push({
+    id: "audio-128",
+    label: "Audio ~128 kbps",
+    formatSelector: sel128,
+    estimatedBytes: est128.bytes,
+    isEstimate: est128.isEstimate,
+  });
+
+  const sel320 = "bestaudio[abr<=320]/bestaudio/best";
+  const est320 = estimateBytes(duration, formats, sel320);
+  options.push({
+    id: "audio-320",
+    label: "Audio ~320 kbps",
+    formatSelector: sel320,
+    estimatedBytes: est320.bytes,
+    isEstimate: est320.isEstimate,
+  });
+
   return { meta, options };
+}
+
+export function thumbnailFromVideoJson(jsonText: string): string | null {
+  try {
+    const info = JSON.parse(jsonText) as RawInfo;
+    return pickThumb(info);
+  } catch {
+    return null;
+  }
 }
 
 export function buildPlaylistPayload(jsonText: string): {

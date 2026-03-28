@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { History, Home, Layers, ListVideo, Settings } from "lucide-react";
 import { DownloadCompleteModal } from "./components/DownloadCompleteModal";
+import { DuplicateFileModal } from "./components/DuplicateFileModal";
 import { TransitionOverlay } from "./components/TransitionOverlay";
 import { Home as HomePage } from "./pages/Home";
 import { Queue } from "./pages/Queue";
@@ -11,8 +12,8 @@ import { Options } from "./pages/Options";
 import { useAppStore } from "./store/app";
 import { useHomeUrlStore } from "./store/homeUrl";
 import { useSettingsStore } from "./store/settingsUi";
-import { extractFirstYtOrTiktokVideoUrl } from "./lib/url";
-import type { TabId } from "@shared/ipc";
+import { extractFirstYtOrTiktokUrlAny } from "./lib/url";
+import type { DuplicateAskPayload, TabId } from "@shared/ipc";
 
 const tabs: Array<{
   id: TabId;
@@ -39,6 +40,7 @@ export default function App() {
   const hydrate = useSettingsStore((s) => s.hydrate);
   const [appVersion, setAppVersion] = useState("");
   const [downloadDone, setDownloadDone] = useState<{ title: string; path: string } | null>(null);
+  const [dupAsk, setDupAsk] = useState<DuplicateAskPayload | null>(null);
 
   useEffect(() => {
     void hydrate();
@@ -61,6 +63,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    return window.omnidl.onDuplicateAsk((p) => setDupAsk(p));
+  }, []);
+
+  useEffect(() => {
     const offA = window.omnidl.onUpdaterAvailable((info) => {
       if (confirm(`Update available: ${info.version}. Download?`)) {
         void window.omnidl.updaterDownload();
@@ -79,22 +85,59 @@ export default function App() {
 
   useEffect(() => {
     if (!clipboardWatch) return;
+    if (tab !== "home") return;
     const id = window.setInterval(() => {
       void (async () => {
         const t = await window.omnidl.readClipboard();
         if (!t) return;
-        const extracted = extractFirstYtOrTiktokVideoUrl(t);
+        const extracted = extractFirstYtOrTiktokUrlAny(t);
         if (!extracted || extracted === lastClip.current) return;
         lastClip.current = extracted;
         setUrl(extracted);
-        setTab("home");
       })();
     }, 600);
     return () => clearInterval(id);
-  }, [clipboardWatch, setUrl, setTab]);
+  }, [clipboardWatch, setUrl, tab]);
+
+  useEffect(() => {
+    if (!clipboardWatch) return;
+    if (tab !== "home") return;
+    void (async () => {
+      const t = await window.omnidl.readClipboard();
+      if (!t) return;
+      const extracted = extractFirstYtOrTiktokUrlAny(t);
+      if (!extracted) return;
+      lastClip.current = extracted;
+      setUrl(extracted);
+    })();
+  }, [tab, clipboardWatch, setUrl]);
 
   return (
     <div className="flex h-screen min-h-0 bg-[#e8dcc8] text-[#111]">
+      <DuplicateFileModal
+        open={dupAsk != null}
+        predictedPath={dupAsk?.predictedPath ?? ""}
+        historyHit={dupAsk?.historyHit ?? false}
+        fileExists={dupAsk?.fileExists ?? false}
+        onRedownload={() => {
+          if (dupAsk) {
+            window.omnidl.duplicateRespond({ jobId: dupAsk.jobId, choice: "redownload" });
+          }
+          setDupAsk(null);
+        }}
+        onOpenFolder={() => {
+          if (dupAsk) {
+            window.omnidl.duplicateRespond({ jobId: dupAsk.jobId, choice: "open" });
+          }
+          setDupAsk(null);
+        }}
+        onCancel={() => {
+          if (dupAsk) {
+            window.omnidl.duplicateRespond({ jobId: dupAsk.jobId, choice: "cancel" });
+          }
+          setDupAsk(null);
+        }}
+      />
       <DownloadCompleteModal
         open={downloadDone != null}
         title={downloadDone?.title ?? ""}
@@ -109,6 +152,7 @@ export default function App() {
       />
       <TransitionOverlay active={overlayOn} sweep={sweep} label={transitionLabel} />
 
+      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
       <aside className="relative z-10 flex w-[260px] shrink-0 flex-col border-r-4 border-[#111] bg-[#111] text-[#faf8f3] shadow-[6px_0_0_0_rgba(0,0,0,0.12)]">
         <div className="border-b-4 border-[#2a2a2a] px-4 py-5">
           <motion.div
@@ -178,14 +222,14 @@ export default function App() {
 
         <main className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
           <div className="mx-auto max-w-[1400px]">
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={tab}
                 role="tabpanel"
-                initial={false}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
               >
                 {tab === "home" && <HomePage url={url} setUrl={setUrl} />}
                 {tab === "queue" && <Queue />}
@@ -196,6 +240,7 @@ export default function App() {
             </AnimatePresence>
           </div>
         </main>
+      </div>
       </div>
     </div>
   );
