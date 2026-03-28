@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-03-27
+
+### Added
+
+- **Facebook**: detect and normalize URLs (`facebook.com`, `m.facebook.com`, `fb.watch`, `fb.com`) on Home and clipboard; metadata shows `facebook` platform when yt-dlp reports it.
+- **Updates**: in-app update flow (neo-brutal modals) replacing OS `confirm` dialogs — available → download with **progress bar, speed, transferred/total** → ready to **Restart and install**; optional **Hide** while downloading; **Finish update (restart)** in Options when an install is pending.
+- Main process forwards `download-progress`, `update-downloaded` (with version), and `error` to the renderer; updater listeners attach once per session.
+
+### Changed
+
+- Update UI and Options copy in **English** for consistency with README / CHANGELOG.
+- Filename quality slug no longer appends `-Video` / `-Audio` (label only, e.g. `Best-video`, `Best-audio`).
+
+### Fixed
+
+- Update errors after closing the download dialog still surface (`setError` forces modal open).
+- Progress events ignored unless phase is **downloading**; percent normalized for 0–1 vs 0–100 from electron-updater.
+
 ## [1.2.0] - 2026-03-27
 
 ### Added
