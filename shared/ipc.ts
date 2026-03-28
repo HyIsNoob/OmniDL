@@ -1,4 +1,10 @@
-export type TabId = "home" | "queue" | "playlist" | "history" | "options";
+export type TabId =
+  | "home"
+  | "queue"
+  | "playlist"
+  | "history"
+  | "options"
+  | "instruction";
 
 export type DuplicateChoice = "redownload" | "open" | "cancel";
 

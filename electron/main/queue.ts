@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readdirSync, unlinkSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import { Notification, app, shell, type BrowserWindow } from "electron";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import {
@@ -26,6 +26,7 @@ function shouldShowOsPush(): boolean {
 let targetWindow: BrowserWindow | null = null;
 const jobs: QueueJob[] = [];
 let activeChild: ChildProcessWithoutNullStreams | null = null;
+let pumpBusy = false;
 
 export function setQueueWindow(win: BrowserWindow | null): void {
   targetWindow = win;
@@ -86,7 +87,7 @@ function ytdlpFormatArgs(job: QueueJob): string[] {
       job.formatSelector,
       "-x",
       "--audio-format",
-      "m4a",
+      "mp3",
       "--audio-quality",
       "0",
       "--no-warnings",
@@ -185,6 +186,29 @@ function removeJobFromQueue(job: QueueJob): void {
   if (idx >= 0) jobs.splice(idx, 1);
 }
 
+function cleanupYtdlpSidecars(outPath: string): void {
+  const dir = dirname(outPath);
+  const base = basename(outPath);
+  const idInName = /\[([^\]]+)\]/.exec(base);
+  const idTag = idInName?.[1];
+  if (!idTag) return;
+  try {
+    for (const name of readdirSync(dir)) {
+      if (name === base) continue;
+      if (!name.includes(`[${idTag}]`)) continue;
+      if (/\.f\d+\.\w+$/.test(name) || name.endsWith(".part")) {
+        try {
+          unlinkSync(join(dir, name));
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 async function runJob(job: QueueJob): Promise<void> {
   if (!jobs.includes(job)) return;
   const dup = await resolveDuplicate(job);
@@ -239,6 +263,7 @@ async function runJob(job: QueueJob): Promise<void> {
     const outPath = findOutputPath(stderr);
     if (outPath && existsSync(outPath)) {
       job.outputPath = outPath;
+      cleanupYtdlpSidecars(outPath);
     } else {
       job.outputPath = job.outputDir;
     }
@@ -278,11 +303,16 @@ async function runJob(job: QueueJob): Promise<void> {
 }
 
 async function pump(): Promise<void> {
-  if (activeChild) return;
+  if (activeChild || pumpBusy) return;
   if (jobs.some((j) => j.status === "paused")) return;
   const next = jobs.find((j) => j.status === "pending");
   if (!next) return;
-  await runJob(next);
+  pumpBusy = true;
+  try {
+    await runJob(next);
+  } finally {
+    pumpBusy = false;
+  }
   await pump();
 }
 
@@ -322,7 +352,8 @@ export function addJob(payload: {
     progress: 0,
   };
   job.outputTemplate = outputTemplateFor(job);
-  const active = jobs.some((j) => j.status === "downloading");
+  const active =
+    jobs.some((j) => j.status === "downloading") || pumpBusy;
   if (!active) {
     jobs.push(job);
     void pump();

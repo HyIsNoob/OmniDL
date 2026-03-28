@@ -4,6 +4,7 @@ import { Download, FolderOpen, Layers, Link2, Loader2, Music, Video } from "luci
 import type { FormatOption, QueueJob, VideoInfoPayload } from "@shared/ipc";
 import { formatBytes, formatDuration } from "../lib/format";
 import { useSettingsStore } from "../store/settingsUi";
+import { useFetchOverlayStore } from "../store/fetchOverlay";
 import { BrutalPanel } from "../components/BrutalPanel";
 
 const infoContainer = {
@@ -85,11 +86,14 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
     return off;
   }, []);
 
+  const setFetchOverlay = useFetchOverlayStore((s) => s.setFetchOverlay);
+
   const fetchNow = useCallback(async () => {
     setErr(null);
     setLoading(true);
     setInfo(null);
     setSel(null);
+    setFetchOverlay(true, "Fetching video…");
     try {
       const normalized = await window.omnidl.normalizeUrl(url.trim());
       const u = normalized || url.trim();
@@ -103,8 +107,9 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
+      setFetchOverlay(false);
     }
-  }, [url]);
+  }, [url, setFetchOverlay]);
 
   useEffect(() => {
     if (!autoFetch) return;

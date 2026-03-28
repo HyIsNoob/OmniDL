@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-03-27
+
+### Added
+
+- **Instruction** tab with expandable usage notes.
+- **Fetch loading overlay** on Home and Playlist while metadata is loading (including auto-fetch).
+
+### Changed
+
+- **Home**: size estimates for **Best video** and **Best audio** align better with merged DASH downloads (correct `bestvideo+bestaudio` handling, track tie-breakers, small merge and best-audio buffers).
+- **Queue**: clearer **Clear** confirmation when work is still active; row click no longer removes items (use **Cancel** on the row).
+- **yt-dlp errors**: shorter, clearer messages for common network and cookie cases.
+
+### Fixed
+
+- **Queue**: single-flight **pump** lock avoids overlapping downloads; cleanup of sidecar files (`.part`, fragment temps); audio jobs prefer **MP3** post-process when applicable.
+- **History** and **Options** copy tweaks for consistency with the English UI.
+
 ## [1.3.5] - 2026-03-28
 
 ### Note

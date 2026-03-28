@@ -1,7 +1,14 @@
 import { create } from "zustand";
 import type { TabId } from "@shared/ipc";
 
-const TAB_ORDER: TabId[] = ["home", "queue", "playlist", "history", "options"];
+const TAB_ORDER: TabId[] = [
+  "home",
+  "queue",
+  "playlist",
+  "history",
+  "instruction",
+  "options",
+];
 
 function tabIndex(t: TabId): number {
   return TAB_ORDER.indexOf(t);
@@ -13,6 +20,7 @@ export const TAB_TRANSITION_LABEL: Record<TabId, string> = {
   playlist: "PLAYLIST",
   history: "HISTORY",
   options: "OPTIONS",
+  instruction: "GUIDE",
 };
 
 export type TabSweep = "up" | "down";

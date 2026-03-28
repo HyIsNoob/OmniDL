@@ -53,7 +53,9 @@ export function Options() {
           Clipboard & fetch
         </div>
         <p className="mt-2 text-sm font-semibold text-neutral-600">
-          Bật phát hiện link trong clipboard: trích URL https (YouTube / TikTok / Facebook) trong đoạn text. Chỉ tab Home tự dán (kể cả khi vừa chuyển sang Home); tab Playlist không tự dán. Các tab khác không tự dán. Auto-fetch chỉ khi URL ở Home thay đổi.
+          When enabled, OmniDL looks for supported https URLs (YouTube, TikTok, Facebook) inside clipboard
+          text. Only the Home tab auto-pastes (including right after you switch to Home). Playlist does not
+          auto-paste; other tabs do not auto-paste. Auto-fetch runs when the Home URL changes.
         </p>
         <label className="mt-4 flex cursor-pointer items-start gap-3 border-4 border-[#111] bg-white p-3 font-bold transition-colors hover:bg-neutral-50">
           <input
@@ -65,7 +67,7 @@ export function Options() {
           <span>
             <span className="font-black uppercase">Detect clipboard</span>
             <span className="mt-1 block text-xs font-semibold text-neutral-600">
-              YouTube / TikTok / Facebook — chỉ khi đang ở tab Home (video, reel, hoặc playlist YouTube)
+              YouTube / TikTok / Facebook — only while you are on Home (video, reel, or YouTube playlist URL)
             </span>
           </span>
         </label>
@@ -79,7 +81,7 @@ export function Options() {
           <span>
             <span className="font-black uppercase">Auto-fetch</span>
             <span className="mt-1 block text-xs font-semibold text-neutral-600">
-              Tự fetch metadata sau khi URL thay đổi (debounce)
+              Fetch metadata after the URL changes (debounced)
             </span>
           </span>
         </label>
@@ -88,7 +90,8 @@ export function Options() {
       <BrutalPanel className="p-5">
         <div className="text-lg font-black">Playlist</div>
         <p className="mt-2 text-sm font-semibold text-neutral-600">
-          Sau khi tải danh sách playlist nhanh (flat), có thể tải lại thumbnail từng video để ảnh rõ hơn (chậm hơn, chạy nền).
+          After a fast flat playlist load, you can fetch per-video thumbnails for sharper images (slower, runs
+          in the background).
         </p>
         <label className="mt-4 flex cursor-pointer items-start gap-3 border-4 border-[#111] bg-white p-3 font-bold transition-colors hover:bg-neutral-50">
           <input
@@ -100,7 +103,7 @@ export function Options() {
           <span>
             <span className="font-black uppercase">Full playlist thumbnails</span>
             <span className="mt-1 block text-xs font-semibold text-neutral-600">
-              Sau Get playlist, tự fetch thumbnail HD từng mục và cập nhật dần trên lưới
+              After Get playlist, fetch HD thumbnails per item and update the grid as they arrive
             </span>
           </span>
         </label>

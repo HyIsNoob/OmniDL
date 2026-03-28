@@ -100,6 +100,35 @@ function pickAudioStreamBytes(f: RawFormat, duration: number): number | null {
   return null;
 }
 
+const MERGE_SIZE_BUFFER = 1.12;
+const BEST_AUDIO_BUFFER = 1.1;
+
+function sortVideoTracksByHeightThenSize(
+  vids: RawFormat[],
+  duration: number,
+): RawFormat[] {
+  return [...vids].sort((a, b) => {
+    const dh = (b.height ?? 0) - (a.height ?? 0);
+    if (dh !== 0) return dh;
+    const sa = pickVideoStreamBytes(a, duration) ?? 0;
+    const sb = pickVideoStreamBytes(b, duration) ?? 0;
+    return sb - sa;
+  });
+}
+
+function sortAudioTracksByAbrThenSize(
+  tracks: RawFormat[],
+  duration: number,
+): RawFormat[] {
+  return [...tracks].sort((a, b) => {
+    const da = (b.abr ?? 0) - (a.abr ?? 0);
+    if (da !== 0) return da;
+    const sa = pickAudioStreamBytes(a, duration) ?? 0;
+    const sb = pickAudioStreamBytes(b, duration) ?? 0;
+    return sb - sa;
+  });
+}
+
 function estimateBytes(
   duration: number | null | undefined,
   formats: RawFormat[] | undefined,
@@ -110,12 +139,12 @@ function estimateBytes(
   }
   const audioOnly =
     /^ba\b/i.test(selector) ||
-    selector.includes("bestaudio") ||
-    selector === "ba/b";
+    selector === "ba/b" ||
+    (selector.includes("bestaudio") && !selector.includes("bestvideo"));
   if (audioOnly) {
     const abrCapMatch = /abr<=(\d+)/.exec(selector);
     const abrCap = abrCapMatch ? Number(abrCapMatch[1]) : undefined;
-    let pool = audioTracksForEstimate(formats).sort((a, b) => (b.abr ?? 0) - (a.abr ?? 0));
+    let pool = sortAudioTracksByAbrThenSize(audioTracksForEstimate(formats), duration);
     if (abrCap != null && !Number.isNaN(abrCap)) {
       const under = pool.filter((f) => (f.abr ?? 0) > 0 && (f.abr ?? 0) <= abrCap);
       if (under.length) pool = under;
@@ -126,13 +155,15 @@ function estimateBytes(
         }
       }
     }
-    const aud = pool[0];
-    if (!aud) return { bytes: null, isEstimate: true };
-    const b = pickAudioStreamBytes(aud, duration);
+    const audPick = pool[0];
+    if (!audPick) return { bytes: null, isEstimate: true };
+    const b = pickAudioStreamBytes(audPick, duration);
     if (b == null) return { bytes: null, isEstimate: true };
+    const isPureBestAudio = /^bestaudio\/best$/i.test(selector.trim());
+    const bytesOut = isPureBestAudio ? Math.round(b * BEST_AUDIO_BUFFER) : b;
     return {
-      bytes: b,
-      isEstimate: aud.filesize == null && aud.filesize_approx == null,
+      bytes: bytesOut,
+      isEstimate: audPick.filesize == null && audPick.filesize_approx == null,
     };
   }
   let best: RawFormat | undefined;
@@ -141,11 +172,11 @@ function estimateBytes(
   const vids = videoTracksForEstimate(formats);
   if (cap != null && !Number.isNaN(cap)) {
     const pool = vids.filter((f) => (f.height ?? 0) <= cap);
-    best = pool.sort((a, b) => (b.height ?? 0) - (a.height ?? 0))[0];
+    best = sortVideoTracksByHeightThenSize(pool, duration)[0];
   } else {
-    best = vids.sort((a, b) => (b.height ?? 0) - (a.height ?? 0))[0];
+    best = sortVideoTracksByHeightThenSize(vids, duration)[0];
   }
-  const aud = audioTracksForEstimate(formats).sort((a, b) => (b.abr ?? 0) - (a.abr ?? 0))[0];
+  const aud = sortAudioTracksByAbrThenSize(audioTracksForEstimate(formats), duration)[0];
   let total = 0;
   let has = false;
   if (best) {
@@ -167,8 +198,14 @@ function estimateBytes(
   if (!has) {
     return { bytes: null, isEstimate: true };
   }
+  const merged =
+    !audioOnly &&
+    (selector.includes("+ba") || selector.includes("+bestaudio")) &&
+    best &&
+    aud;
+  const bytesOut = merged ? Math.round(total * MERGE_SIZE_BUFFER) : Math.round(total);
   return {
-    bytes: Math.round(total),
+    bytes: bytesOut,
     isEstimate: true,
   };
 }

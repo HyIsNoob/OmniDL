@@ -4,6 +4,7 @@ import { FolderOpen, ListVideo, Loader2, Plus } from "lucide-react";
 import type { PlaylistEntry, PlaylistInfoPayload } from "@shared/ipc";
 import { BrutalPanel } from "../components/BrutalPanel";
 import { usePlaylistUrlStore } from "../store/playlistUrl";
+import { useFetchOverlayStore } from "../store/fetchOverlay";
 import { useSettingsStore } from "../store/settingsUi";
 
 const btnHover =
@@ -27,6 +28,7 @@ export function Playlist() {
   const url = usePlaylistUrlStore((s) => s.url);
   const setUrl = usePlaylistUrlStore((s) => s.setUrl);
   const playlistFullThumbnails = useSettingsStore((s) => s.playlistFullThumbnails);
+  const setFetchOverlay = useFetchOverlayStore((s) => s.setFetchOverlay);
   const [limit, setLimit] = useState(50);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -84,6 +86,7 @@ export function Playlist() {
     setLoading(true);
     setData(null);
     setRefineSnapshot(null);
+    setFetchOverlay(true, "Loading playlist…");
     try {
       const lim = Math.min(100, Math.max(1, limit));
       await window.omnidl.settingsSet("playlistLimit", String(lim));
@@ -95,6 +98,7 @@ export function Playlist() {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
+      setFetchOverlay(false);
     }
   };
 

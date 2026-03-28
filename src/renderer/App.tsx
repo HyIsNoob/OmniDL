@@ -5,11 +5,13 @@ import { DownloadCompleteModal } from "./components/DownloadCompleteModal";
 import { DuplicateFileModal } from "./components/DuplicateFileModal";
 import { UpdateModal } from "./components/UpdateModal";
 import { TransitionOverlay } from "./components/TransitionOverlay";
+import { FetchLoadingOverlay } from "./components/FetchLoadingOverlay";
 import { Home as HomePage } from "./pages/Home";
 import { Queue } from "./pages/Queue";
 import { Playlist } from "./pages/Playlist";
 import { History as HistoryPage } from "./pages/History";
 import { Options } from "./pages/Options";
+import { Instruction } from "./pages/Instruction";
 import { useAppStore } from "./store/app";
 import { useHomeUrlStore } from "./store/homeUrl";
 import { useSettingsStore } from "./store/settingsUi";
@@ -20,12 +22,13 @@ import { useUpdateUiStore } from "./store/updateUi";
 const tabs: Array<{
   id: TabId;
   label: string;
-  Icon: typeof Home;
+  Icon?: typeof Home;
 }> = [
   { id: "home", label: "Home", Icon: Home },
   { id: "queue", label: "Queue", Icon: Layers },
   { id: "playlist", label: "Playlist", Icon: ListVideo },
   { id: "history", label: "History", Icon: History },
+  { id: "instruction", label: "Instruction" },
   { id: "options", label: "Options", Icon: Settings },
 ];
 
@@ -169,6 +172,7 @@ export default function App() {
         onDone={() => setDownloadDone(null)}
       />
       <TransitionOverlay active={overlayOn} sweep={sweep} label={transitionLabel} />
+      <FetchLoadingOverlay />
 
       <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
       <aside className="relative z-10 flex w-[260px] shrink-0 flex-col border-r-4 border-[#111] bg-[#111] text-[#faf8f3] shadow-[6px_0_0_0_rgba(0,0,0,0.12)]">
@@ -206,7 +210,16 @@ export default function App() {
                     : "border-transparent bg-transparent text-[#d4d4d4] hover:border-[#444] hover:bg-[#1e1e1e]"
                 }`}
               >
-                <Icon className="h-6 w-6 shrink-0" strokeWidth={2} aria-hidden />
+                {Icon ? (
+                  <Icon className="h-6 w-6 shrink-0" strokeWidth={2} aria-hidden />
+                ) : (
+                  <span
+                    className="flex h-6 w-6 shrink-0 items-center justify-center border-2 border-current font-mono text-xs font-black leading-none"
+                    aria-hidden
+                  >
+                    i
+                  </span>
+                )}
                 <span className="min-w-0 flex-1 truncate">{t.label}</span>
               </button>
             );
@@ -229,11 +242,12 @@ export default function App() {
               {tabs.find((x) => x.id === tab)?.label ?? tab}
             </h1>
             <span className="text-xs font-bold text-neutral-500">
-              {tab === "home" && "Dán link · Fetch · chọn chất lượng"}
-              {tab === "queue" && "Tiến trình tải · tạm dừng / hủy"}
-              {tab === "playlist" && "Playlist · enqueue hàng loạt"}
-              {tab === "history" && "Đã tải · mở thư mục"}
-              {tab === "options" && "Clipboard · cập nhật"}
+              {tab === "home" && "Paste link · Fetch · pick quality"}
+              {tab === "queue" && "Downloads · pause / cancel"}
+              {tab === "playlist" && "Playlist · batch enqueue"}
+              {tab === "history" && "Completed · open folder"}
+              {tab === "options" && "Clipboard · updates"}
+              {tab === "instruction" && "Errors · queue · formats"}
             </span>
           </div>
         </div>
@@ -253,6 +267,7 @@ export default function App() {
                 {tab === "queue" && <Queue />}
                 {tab === "playlist" && <Playlist />}
                 {tab === "history" && <HistoryPage />}
+                {tab === "instruction" && <Instruction />}
                 {tab === "options" && <Options />}
               </motion.div>
             </AnimatePresence>

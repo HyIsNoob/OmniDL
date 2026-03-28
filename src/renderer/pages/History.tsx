@@ -45,14 +45,14 @@ export function History() {
     <div className="space-y-5">
       <ConfirmModal
         open={pending !== null}
-        title={pending?.type === "clear" ? "Xóa toàn bộ lịch sử?" : "Xóa mục này?"}
+        title={pending?.type === "clear" ? "Clear all history?" : "Remove this entry?"}
         body={
           pending?.type === "clear"
-            ? "Tất cả bản ghi lịch sử sẽ bị xóa khỏi ứng dụng. Thao tác không hoàn tác."
-            : "Bản ghi sẽ bị xóa khỏi danh sách. File trên đĩa (nếu còn) không bị xóa."
+            ? "All history entries will be removed from the app. This cannot be undone."
+            : "The entry is removed from the list. Files on disk (if any) are not deleted."
         }
-        confirmText="Xóa"
-        cancelText="Hủy"
+        confirmText={pending?.type === "clear" ? "Clear all" : "Remove"}
+        cancelText="Cancel"
         danger
         onClose={() => setPending(null)}
         onConfirm={() => {
@@ -74,7 +74,7 @@ export function History() {
         </motion.button>
       </div>
       {!rows.length && (
-        <BrutalPanel className="p-8 text-center font-bold text-neutral-500">Trống</BrutalPanel>
+        <BrutalPanel className="p-8 text-center font-bold text-neutral-500">Empty</BrutalPanel>
       )}
       <ul className="space-y-3">
         <AnimatePresence initial={false}>
@@ -98,7 +98,7 @@ export function History() {
                         {h.quality} · {h.kind} · {new Date(h.createdAt).toLocaleString()}
                       </div>
                       <div className="mt-1 text-xs font-bold">
-                        {h.exists ? "Còn file" : "Đã xóa file"}
+                        {h.exists ? "File on disk" : "File missing"}
                       </div>
                     </div>
                   </div>

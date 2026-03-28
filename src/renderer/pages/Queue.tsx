@@ -49,6 +49,10 @@ export function Queue() {
   }, []);
 
   const jobs = state?.jobs ?? EMPTY_JOBS;
+  const hasActiveWork = useMemo(
+    () => jobs.some((j) => ["downloading", "pending", "paused"].includes(j.status)),
+    [jobs],
+  );
   const totalPages = Math.max(1, Math.ceil(jobs.length / PAGE));
   const pageClamped = Math.min(Math.max(1, page), totalPages);
   const slice = useMemo(() => {
@@ -65,14 +69,16 @@ export function Queue() {
     <div className="space-y-5">
       <ConfirmModal
         open={pending !== null}
-        title={pending?.type === "clear" ? "Xóa các tác vụ đã xong?" : "Hủy tải?"}
+        title={pending?.type === "clear" ? "Clear finished?" : "Cancel download?"}
         body={
           pending?.type === "clear"
-            ? "Các mục completed / error / cancelled sẽ bị gỡ khỏi danh sách."
-            : "Tải sẽ bị dừng và mục bị xóa khỏi hàng đợi."
+            ? hasActiveWork
+              ? "Only completed, failed, or cancelled rows are removed. Items still downloading or waiting stay in the queue."
+              : "Remove completed, failed, or cancelled rows from the list."
+            : "The download stops and this row is removed from the queue."
         }
-        confirmText={pending?.type === "clear" ? "Xóa" : "Hủy tải"}
-        cancelText="Đóng"
+        confirmText={pending?.type === "clear" ? "Clear" : "Cancel"}
+        cancelText="Close"
         danger={pending?.type === "cancel"}
         onClose={() => setPending(null)}
         onConfirm={() => {
@@ -93,7 +99,7 @@ export function Queue() {
         </motion.button>
       </div>
       {!jobs.length && (
-        <BrutalPanel className="p-8 text-center font-bold text-neutral-500">Trống</BrutalPanel>
+        <BrutalPanel className="p-8 text-center font-bold text-neutral-500">Empty</BrutalPanel>
       )}
       <ul className="space-y-3">
         <AnimatePresence initial={false}>
@@ -106,18 +112,7 @@ export function Queue() {
               exit={{ opacity: 0, x: 14, transition: { duration: 0.2 } }}
               transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             >
-              <div
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    void window.omnidl.queueRemove(j.id);
-                  }
-                }}
-                onClick={() => void window.omnidl.queueRemove(j.id)}
-                className="block w-full cursor-pointer text-left"
-              >
+              <div className="block w-full text-left">
                 <BrutalPanel className="p-4">
                   <div className="flex flex-wrap items-start gap-3">
                     <div className="flex flex-1 flex-wrap items-start gap-3">
@@ -197,6 +192,19 @@ export function Queue() {
                         >
                           <X className="h-4 w-4" strokeWidth={2} aria-hidden />
                           Cancel
+                        </motion.button>
+                      )}
+                      {(j.status === "completed" ||
+                        j.status === "error" ||
+                        j.status === "cancelled") && (
+                        <motion.button
+                          type="button"
+                          whileHover={{ y: -2 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => void window.omnidl.queueRemove(j.id)}
+                          className={`inline-flex items-center gap-1 border-4 border-[#111] bg-neutral-200 px-2 py-1.5 text-xs font-black uppercase ${btnHover}`}
+                        >
+                          Remove
                         </motion.button>
                       )}
                     </div>
