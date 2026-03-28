@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.4] - 2026-03-28
+
+### Fixed
+
+- **Windows auto-update**: set explicit NSIS and portable `artifactName` values so `latest.yml` paths match the installer and portable binaries uploaded to GitHub (avoids HTTP 404 when the YAML pointed at `OmniDL-Setup-*.exe` but the release only had spaced names like `OmniDL Setup *.exe`).
+
 ## [1.3.3] - 2026-03-27
 
 ### Note
