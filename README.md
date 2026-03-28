@@ -19,8 +19,6 @@ OmniDL wraps **yt-dlp** and **FFmpeg** in a focused UI: paste a link, pick a for
 
 ## Features
 
-Replace files under [`docs/screenshots/`](docs/screenshots/) with real PNG or JPG captures when you are ready. Paths below point at SVG placeholders until then.
-
 ### Home
 
 Paste a **YouTube** or **TikTok** video URL, run **Fetch** to load title, duration, and format ladder (with rough size hints). Choose **video** or **audio**, pick a quality preset, set output folder, then **Add to queue** (next or end). **Auto-fetch** (in Options) can run Fetch automatically when the URL field changes.
