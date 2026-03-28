@@ -74,6 +74,8 @@ export default function App() {
     const setReady = useUpdateUiStore.getState().setReady;
     const setError = useUpdateUiStore.getState().setError;
     const offA = window.omnidl.onUpdaterAvailable((info) => {
+      const ph = useUpdateUiStore.getState().phase;
+      if (ph === "downloading" || ph === "ready") return;
       openAvailable(info.version);
     });
     const offP = window.omnidl.onUpdaterProgress((p) => {
@@ -86,7 +88,7 @@ export default function App() {
     });
     const offE = window.omnidl.onUpdaterError((e) => {
       const phase = useUpdateUiStore.getState().phase;
-      if (phase === "downloading") {
+      if (phase === "downloading" || phase === "ready" || phase === "available") {
         setError(e.message);
       }
     });

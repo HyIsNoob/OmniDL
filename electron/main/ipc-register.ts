@@ -207,6 +207,12 @@ export function registerIpc(isDev: boolean): void {
       return { version: r?.updateInfo?.version ?? null };
     });
     ipcMain.handle("updater:download", async () => {
+      const result = await autoUpdater.checkForUpdates();
+      if (result == null || !result.isUpdateAvailable) {
+        throw new Error(
+          "No update is available. Use Check app update in Settings, then try again.",
+        );
+      }
       await autoUpdater.downloadUpdate();
     });
     ipcMain.handle("updater:quitAndInstall", () => {

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-03-27
+
+### Fixed
+
+- **Auto-update**: download handler runs `checkForUpdates` before `downloadUpdate` so the updater always has release metadata (avoids silent failure / “check update first” edge cases).
+- **Auto-update**: `updater:error` from the main process now opens the error modal during **available**, **downloading**, and **ready** (so **Restart and install** failures such as missing downloaded installer are visible instead of doing nothing).
+- **Auto-update**: ignore duplicate `update-available` broadcasts while **downloading** or **ready** so the UI is not reset mid-flow.
+- **Options**: **Check app update** surfaces IPC failures via the update error modal.
+
 ## [1.3.1] - 2026-03-27
 
 ### Changed

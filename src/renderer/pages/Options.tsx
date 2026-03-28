@@ -20,6 +20,7 @@ export function Options() {
   const setPlaylistFullThumbnails = useSettingsStore((s) => s.setPlaylistFullThumbnails);
   const pendingInstall = useUpdateUiStore((s) => s.pendingInstall);
   const reopenInstall = useUpdateUiStore((s) => s.reopenInstall);
+  const setUpdateError = useUpdateUiStore((s) => s.setError);
   const [appV, setAppV] = useState("");
   const [ytV, setYtV] = useState<string | null>(null);
   const [remote, setRemote] = useState<string | null>(null);
@@ -168,7 +169,11 @@ export function Options() {
             whileHover={{ y: -2 }}
             whileTap={{ scale: 0.98 }}
             onClick={async () => {
-              await window.omnidl.updaterCheck();
+              try {
+                await window.omnidl.updaterCheck();
+              } catch (e: unknown) {
+                setUpdateError(e instanceof Error ? e.message : String(e));
+              }
             }}
             className={`inline-flex items-center gap-2 border-4 border-[#111] bg-white px-3 py-2 text-xs font-black uppercase shadow-[4px_4px_0_0_#111] ${btnHover}`}
           >
