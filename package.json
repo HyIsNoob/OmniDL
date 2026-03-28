@@ -1,6 +1,6 @@
 {
   "name": "omnidl",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "OmniDL — YouTube, TikTok & Facebook downloader",
   "main": "out/main/index.js",
   "type": "module",

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-03-27
+
+### Note
+
+- Test release only: verify in-app update from 1.3.2 (or earlier) without functional changes intended for users.
+
 ## [1.3.2] - 2026-03-27
 
 ### Fixed
