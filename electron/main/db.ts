@@ -174,19 +174,19 @@ export function historyClear(): void {
   persist();
 }
 
-export function historyUrlExists(url: string): boolean {
-  const stmt = getDb().prepare("SELECT 1 FROM history WHERE url = ? LIMIT 1");
-  stmt.bind([url]);
+export function historyUrlExists(url: string, kind: string): boolean {
+  const stmt = getDb().prepare("SELECT 1 FROM history WHERE url = ? AND kind = ? LIMIT 1");
+  stmt.bind([url, kind]);
   const ok = stmt.step();
   stmt.free();
   return ok;
 }
 
-export function historyGetMediaPathByUrl(url: string): string | null {
+export function historyGetMediaPathByUrl(url: string, kind: string): string | null {
   const stmt = getDb().prepare(
-    "SELECT media_path FROM history WHERE url = ? ORDER BY created_at DESC LIMIT 1",
+    "SELECT media_path FROM history WHERE url = ? AND kind = ? ORDER BY created_at DESC LIMIT 1",
   );
-  stmt.bind([url]);
+  stmt.bind([url, kind]);
   if (!stmt.step()) {
     stmt.free();
     return null;

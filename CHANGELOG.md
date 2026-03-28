@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-03-28
+
+### Changed
+
+- **Video downloads**: after merge, **ffmpeg** re-encodes audio to **AAC** (`Merger+ffmpeg`) so merged **MP4** files play with sound in Windows Media Player and similar players (avoids **Opus**-in-MP4 playback issues).
+- **Formats**: **Best video** selectors use **`bv*+ba/b`** (and tier / playlist equivalents); **`--ffmpeg-location`** uses the **directory** containing the bundled ffmpeg so **merge** runs reliably on Windows.
+
+### Fixed
+
+- **Duplicate download prompt**: history checks use **URL + kind** (`video` vs `audio`), so downloading **best video** and **best audio** for the same link is no longer treated as a duplicate of the other.
+
 ## [1.4.1] - 2026-03-28
 
 ### Changed

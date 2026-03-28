@@ -23,8 +23,9 @@ export function getFfmpegLocation(): string | undefined {
 
 function ytdlpArgs(base: string[]): string[] {
   const out = [...base];
-  if (ffmpegStatic) {
-    out.push("--ffmpeg-location", ffmpegStatic);
+  const ff = getFfmpegLocation();
+  if (ff) {
+    out.push("--ffmpeg-location", ff);
   }
   if (process.platform === "win32") {
     out.push("--windows-filenames");

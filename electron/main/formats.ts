@@ -231,7 +231,7 @@ export function buildVideoPayload(jsonText: string): VideoInfoPayload {
 
   const options: FormatOption[] = [];
 
-  const bestVidSel = "bestvideo+bestaudio/best";
+  const bestVidSel = "bv*+ba/b";
   const bestVidEst = estimateBytes(duration, formats, bestVidSel);
   options.push({
     id: "best-video",
@@ -243,7 +243,7 @@ export function buildVideoPayload(jsonText: string): VideoInfoPayload {
 
   for (const t of TIERS) {
     if (maxHeight < t) continue;
-    const sel = `bestvideo[height<=${t}]+bestaudio/best[height<=${t}]`;
+    const sel = `bv*[height<=${t}]+ba/b[height<=${t}]`;
     const est = estimateBytes(duration, formats, sel);
     const label =
       t === 1440 ? "2K (1440p)" : t === 2160 ? "4K (2160p)" : `${t}p`;

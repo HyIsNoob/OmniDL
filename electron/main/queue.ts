@@ -105,6 +105,8 @@ function ytdlpFormatArgs(job: QueueJob): string[] {
     "--continue",
     "--merge-output-format",
     "mp4",
+    "--postprocessor-args",
+    "Merger+ffmpeg:-c:v copy -c:a aac -b:a 192k -movflags +faststart",
   ];
 }
 
@@ -134,14 +136,14 @@ async function predictOutputPath(job: QueueJob): Promise<string | null> {
 
 async function resolveDuplicate(job: QueueJob): Promise<"proceed" | "skip" | "abort"> {
   const predicted = await predictOutputPath(job);
-  const hist = historyUrlExists(job.url);
+  const hist = historyUrlExists(job.url, job.kind);
   const fileExists = predicted != null && existsSync(predicted);
   if (!hist && !fileExists) return "proceed";
 
   const openTarget =
     fileExists && predicted
       ? predicted
-      : historyGetMediaPathByUrl(job.url) ?? (predicted ?? undefined);
+      : historyGetMediaPathByUrl(job.url, job.kind) ?? (predicted ?? undefined);
 
   if (!targetWindow || targetWindow.isDestroyed()) {
     return "abort";

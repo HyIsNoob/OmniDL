@@ -16,11 +16,11 @@ function selectorFor(mode: PlMode): { label: string; formatSelector: string; kin
   if (mode === "480")
     return {
       label: "480p",
-      formatSelector: "bestvideo[height<=480]+bestaudio/best[height<=480]",
+      formatSelector: "bv*[height<=480]+ba/b[height<=480]",
       kind: "video",
     };
   if (mode === "bestv")
-    return { label: "Best video", formatSelector: "bestvideo+bestaudio/best", kind: "video" };
+    return { label: "Best video", formatSelector: "bv*+ba/b", kind: "video" };
   return { label: "Best audio", formatSelector: "bestaudio/best", kind: "audio" };
 }
 
