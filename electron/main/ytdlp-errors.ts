@@ -6,9 +6,28 @@ export function formatYtdlpUserMessage(stderr: string, code: number): string {
   if (looksLikeCookieOrRestricted(raw)) {
     return "This source may need sign-in or cookies. Wait a moment and try Fetch / download again.";
   }
+  const post = postprocessorOrFfmpegLine(raw);
+  if (post) return `${post} Try again if this was temporary.`;
   if (!raw) return `yt-dlp failed (${code}). Try again if this was temporary.`;
   if (raw.length > 320) return `${raw.slice(0, 320)}… Try again if this was temporary.`;
   return `${raw} Try again if this was temporary.`;
+}
+
+function postprocessorOrFfmpegLine(stderr: string): string | null {
+  const lines = stderr.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const L = lines[i];
+    if (
+      /Post-?processor|ERROR:\s*ffmpeg|ffmpeg exited|Conversion failed|Could not find|not recognized as an internal or external command/i.test(
+        L,
+      ) ||
+      (/ffmpeg/i.test(L) && /error|failed|invalid|cannot/i.test(L))
+    ) {
+      const clipped = L.length > 280 ? `${L.slice(0, 280)}…` : L;
+      return clipped;
+    }
+  }
+  return null;
 }
 
 function looksLikeNetworkError(stderr: string): boolean {

@@ -4,10 +4,35 @@ import { useFetchOverlayStore } from "../store/fetchOverlay";
 export function FetchLoadingOverlay() {
   const active = useFetchOverlayStore((s) => s.active);
   const label = useFetchOverlayStore((s) => s.label);
+  const variant = useFetchOverlayStore((s) => s.variant);
 
   return (
     <AnimatePresence>
-      {active ? (
+      {active && variant === "silent" ? (
+        <motion.div
+          className="pointer-events-none fixed inset-x-0 top-0 z-[280]"
+          role="status"
+          aria-busy="true"
+          aria-live="polite"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+        >
+          <div className="flex h-10 items-center justify-center border-b-4 border-[#111] bg-[#fffef8]/95 backdrop-blur-sm">
+            <motion.div
+              className="absolute inset-x-0 bottom-0 h-1.5 origin-left bg-[#4ecdc4]"
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut", repeatType: "reverse" }}
+            />
+            <span className="relative text-[11px] font-black uppercase tracking-[0.2em] text-[#111]">
+              {label || "Loading…"}
+            </span>
+          </div>
+        </motion.div>
+      ) : null}
+      {active && variant === "default" ? (
         <motion.div
           className="fixed inset-0 z-[280] flex items-center justify-center bg-[#0a0a0a]/88 p-6 backdrop-blur-md"
           role="alertdialog"

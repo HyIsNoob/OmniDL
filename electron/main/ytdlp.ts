@@ -22,9 +22,14 @@ export function getFfmpegLocation(): string | undefined {
 }
 
 function ytdlpArgs(base: string[]): string[] {
-  const ff = getFfmpegLocation();
-  if (ff) return [...base, "--ffmpeg-location", ff];
-  return base;
+  const out = [...base];
+  if (ffmpegStatic) {
+    out.push("--ffmpeg-location", ffmpegStatic);
+  }
+  if (process.platform === "win32") {
+    out.push("--windows-filenames");
+  }
+  return out;
 }
 
 async function downloadToFile(url: string, dest: string): Promise<void> {

@@ -99,8 +99,8 @@ export function Instruction() {
             appear when you focus Home.
           </Zone>
           <Zone step="02" title="Fetch" accent="bg-[#ffe66d]">
-            Press Fetch (or wait for auto-fetch). A blocking overlay appears until metadata is ready—stay
-            on it so yt-dlp can finish.
+            Press Fetch for a full-screen loader until metadata is ready. With auto-fetch enabled, a slim
+            top bar shows progress instead so you can keep using the app.
           </Zone>
           <Zone step="03" title="Quality & folder" accent="bg-[#fab1a0]">
             Choose video or audio, then a format. Pick the save folder with Folder (stored for next time).
@@ -173,9 +173,8 @@ export function Instruction() {
           When you see the fetch overlay
         </h2>
         <p className="mt-3 text-sm font-bold leading-relaxed text-neutral-800">
-          After you press Fetch on Home, when auto-fetch runs, or when you use Get playlist on Playlist,
-          OmniDL covers the window with a loading screen until the request finishes. That keeps focus on one
-          network task until metadata is ready.
+          Manual Fetch on Home and Get playlist on Playlist use a full-screen overlay until the request
+          finishes. Auto-fetch on Home uses a thin top bar only so the window stays usable.
         </p>
       </motion.div>
 

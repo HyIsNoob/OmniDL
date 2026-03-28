@@ -88,28 +88,32 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
 
   const setFetchOverlay = useFetchOverlayStore((s) => s.setFetchOverlay);
 
-  const fetchNow = useCallback(async () => {
-    setErr(null);
-    setLoading(true);
-    setInfo(null);
-    setSel(null);
-    setFetchOverlay(true, "Fetching video…");
-    try {
-      const normalized = await window.omnidl.normalizeUrl(url.trim());
-      const u = normalized || url.trim();
-      const data = await window.omnidl.fetchVideo(u);
-      setInfo(data);
-      const first =
-        data.options.find((o) => o.id === "best-video") ?? data.options[0] ?? null;
-      setSel(first);
-      setAudioSel("best-audio");
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-      setFetchOverlay(false);
-    }
-  }, [url, setFetchOverlay]);
+  const fetchNow = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      const silent = opts?.silent ?? false;
+      setErr(null);
+      setLoading(true);
+      setInfo(null);
+      setSel(null);
+      setFetchOverlay(true, silent ? "Fetching…" : "Fetching video…", silent ? "silent" : "default");
+      try {
+        const normalized = await window.omnidl.normalizeUrl(url.trim());
+        const u = normalized || url.trim();
+        const data = await window.omnidl.fetchVideo(u);
+        setInfo(data);
+        const first =
+          data.options.find((o) => o.id === "best-video") ?? data.options[0] ?? null;
+        setSel(first);
+        setAudioSel("best-audio");
+      } catch (e) {
+        setErr(e instanceof Error ? e.message : String(e));
+      } finally {
+        setLoading(false);
+        setFetchOverlay(false);
+      }
+    },
+    [url, setFetchOverlay],
+  );
 
   useEffect(() => {
     if (!autoFetch) return;
@@ -125,7 +129,7 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
       ) {
         return;
       }
-      void fetchNow();
+      void fetchNow({ silent: true });
     }, 700);
     return () => window.clearTimeout(t);
   }, [url, fetchNow, autoFetch]);

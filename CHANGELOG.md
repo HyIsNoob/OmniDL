@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-03-28
+
+### Changed
+
+- **Home**: with **auto-fetch** enabled, metadata loading uses a **slim top bar** instead of the full-screen fetch overlay; manual **Fetch** still uses the full overlay.
+- **Instruction**: copy updated to describe auto-fetch vs manual fetch behavior.
+
+### Fixed
+
+- **Windows audio downloads**: yt-dlp runs with **`--windows-filenames`** and **`--ffmpeg-location`** set to the bundled **ffmpeg executable** so **best audio** (webm → MP3) is less likely to fail on paths with Unicode or long names.
+- **Errors**: user-facing yt-dlp messages prefer **post-processor / ffmpeg** lines when present.
+
 ## [1.4.0] - 2026-03-27
 
 ### Added
