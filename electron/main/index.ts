@@ -10,6 +10,7 @@ import { ensureYtdlp, setBinDir } from "./ytdlp.js";
 const isDev = !app.isPackaged;
 
 let mainWindow: BrowserWindow | null = null;
+let autoUpdaterListenersAttached = false;
 
 function appIconPath(): string | undefined {
   const p = app.isPackaged
@@ -112,13 +113,36 @@ function createMainWindow(): void {
     mainWindow?.show();
   });
   mainWindow.webContents.once("did-finish-load", () => {
-    if (!isDev && app.isPackaged) {
+    if (!isDev && app.isPackaged && !autoUpdaterListenersAttached) {
+      autoUpdaterListenersAttached = true;
       autoUpdater.autoDownload = false;
+      let pendingUpdateVersion: string | null = null;
+      const broadcast = (channel: string, payload: object) => {
+        for (const w of BrowserWindow.getAllWindows()) {
+          if (!w.isDestroyed()) {
+            w.webContents.send(channel, payload);
+          }
+        }
+      };
       autoUpdater.on("update-available", (info) => {
-        mainWindow?.webContents.send("updater:available", { version: info.version });
+        pendingUpdateVersion = info.version;
+        broadcast("updater:available", { version: info.version });
       });
-      autoUpdater.on("update-downloaded", () => {
-        mainWindow?.webContents.send("updater:downloaded");
+      autoUpdater.on("download-progress", (e) => {
+        broadcast("updater:progress", {
+          percent: e.percent,
+          bytesPerSecond: e.bytesPerSecond,
+          transferred: e.transferred,
+          total: e.total,
+        });
+      });
+      autoUpdater.on("update-downloaded", (info) => {
+        const v =
+          (info as { version?: string }).version ?? pendingUpdateVersion ?? "";
+        broadcast("updater:downloaded", { version: v });
+      });
+      autoUpdater.on("error", (err) => {
+        broadcast("updater:error", { message: err.message });
       });
       void autoUpdater.checkForUpdates().catch(() => undefined);
     }

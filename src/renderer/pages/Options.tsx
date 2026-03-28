@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Bell, Clipboard, Download, RefreshCw, Sparkles } from "lucide-react";
+import { Bell, Clipboard, RefreshCw, Sparkles } from "lucide-react";
 import { BrutalPanel } from "../components/BrutalPanel";
 import { useSettingsStore } from "../store/settingsUi";
+import { useUpdateUiStore } from "../store/updateUi";
 
 const btnHover =
   "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#111] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none";
@@ -17,6 +18,8 @@ export function Options() {
   const setAutoFetch = useSettingsStore((s) => s.setAutoFetch);
   const setNotificationsPush = useSettingsStore((s) => s.setNotificationsPush);
   const setPlaylistFullThumbnails = useSettingsStore((s) => s.setPlaylistFullThumbnails);
+  const pendingInstall = useUpdateUiStore((s) => s.pendingInstall);
+  const reopenInstall = useUpdateUiStore((s) => s.reopenInstall);
   const [appV, setAppV] = useState("");
   const [ytV, setYtV] = useState<string | null>(null);
   const [remote, setRemote] = useState<string | null>(null);
@@ -49,7 +52,7 @@ export function Options() {
           Clipboard & fetch
         </div>
         <p className="mt-2 text-sm font-semibold text-neutral-600">
-          Bật phát hiện link trong clipboard: trích URL https (YouTube / TikTok) trong đoạn text. Chỉ tab Home tự dán (kể cả khi vừa chuyển sang Home); tab Playlist không tự dán. Các tab khác không tự dán. Auto-fetch chỉ khi URL ở Home thay đổi.
+          Bật phát hiện link trong clipboard: trích URL https (YouTube / TikTok / Facebook) trong đoạn text. Chỉ tab Home tự dán (kể cả khi vừa chuyển sang Home); tab Playlist không tự dán. Các tab khác không tự dán. Auto-fetch chỉ khi URL ở Home thay đổi.
         </p>
         <label className="mt-4 flex cursor-pointer items-start gap-3 border-4 border-[#111] bg-white p-3 font-bold transition-colors hover:bg-neutral-50">
           <input
@@ -61,7 +64,7 @@ export function Options() {
           <span>
             <span className="font-black uppercase">Detect clipboard</span>
             <span className="mt-1 block text-xs font-semibold text-neutral-600">
-              YouTube / TikTok — chỉ khi đang ở tab Home (link video và link playlist)
+              YouTube / TikTok / Facebook — chỉ khi đang ở tab Home (video, reel, hoặc playlist YouTube)
             </span>
           </span>
         </label>
@@ -142,6 +145,10 @@ export function Options() {
             </>
           ) : null}
         </div>
+        <p className="mt-2 text-xs font-semibold text-neutral-600">
+          App updates use a dialog: download progress, then restart to install. You can hide the dialog while
+          downloading.
+        </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <motion.button
             type="button"
@@ -167,25 +174,17 @@ export function Options() {
           >
             Check app update
           </motion.button>
-          <motion.button
-            type="button"
-            whileHover={{ y: -2 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => void window.omnidl.updaterDownload()}
-            className={`inline-flex items-center gap-2 border-4 border-[#111] bg-[#4ecdc4] px-3 py-2 text-xs font-black uppercase shadow-[4px_4px_0_0_#111] ${btnHover}`}
-          >
-            <Download className="h-4 w-4" strokeWidth={2} aria-hidden />
-            Download app update
-          </motion.button>
-          <motion.button
-            type="button"
-            whileHover={{ y: -2 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => void window.omnidl.updaterQuitAndInstall()}
-            className={`inline-flex items-center gap-2 border-4 border-[#111] bg-[#ff6b6b] px-3 py-2 text-xs font-black uppercase text-white shadow-[4px_4px_0_0_#111] ${btnHover}`}
-          >
-            Restart & install
-          </motion.button>
+          {pendingInstall ? (
+            <motion.button
+              type="button"
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => reopenInstall()}
+              className={`inline-flex items-center gap-2 border-4 border-[#111] bg-[#ff6b6b] px-3 py-2 text-xs font-black uppercase text-white shadow-[4px_4px_0_0_#111] ${btnHover}`}
+            >
+              Finish update (restart)
+            </motion.button>
+          ) : null}
         </div>
       </BrutalPanel>
     </div>

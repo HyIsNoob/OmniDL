@@ -45,6 +45,7 @@ function platformFrom(info: RawInfo): VideoMetaDisplay["platform"] {
   const e = (info.extractor ?? "").toLowerCase();
   if (e.includes("youtube")) return "youtube";
   if (e.includes("tiktok")) return "tiktok";
+  if (e.includes("facebook")) return "facebook";
   return "unknown";
 }
 

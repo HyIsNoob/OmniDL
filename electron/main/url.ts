@@ -28,7 +28,11 @@ export function looksLikeYtOrTiktok(text: string): boolean {
     t.includes("youtube.com") ||
     t.includes("youtu.be") ||
     t.includes("tiktok.com") ||
-    t.includes("vm.tiktok.com")
+    t.includes("vm.tiktok.com") ||
+    t.includes("facebook.com") ||
+    t.includes("m.facebook.com") ||
+    t.includes("fb.watch") ||
+    t.includes("fb.com/")
   );
 }
 

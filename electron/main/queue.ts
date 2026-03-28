@@ -10,6 +10,7 @@ import {
   settingsGet,
 } from "./db.js";
 import { downloadThumbnail } from "./thumbnail.js";
+import { formatYtdlpUserMessage } from "./ytdlp-errors.js";
 import { runYtdlp, runYtdlpDownload, type DownloadProgress } from "./ytdlp.js";
 import type {
   DuplicateChoice,
@@ -228,7 +229,7 @@ async function runJob(job: QueueJob): Promise<void> {
     if (job.status === "paused") return;
     if (code !== 0) {
       job.status = "error";
-      job.error = `yt-dlp exited with ${code}`;
+      job.error = formatYtdlpUserMessage(stderr, code);
       job.progress = 0;
       pushState();
       return;

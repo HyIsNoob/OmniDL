@@ -84,10 +84,30 @@ const api = {
     ipcRenderer.on("updater:available", fn);
     return () => ipcRenderer.removeListener("updater:available", fn);
   },
-  onUpdaterDownloaded: (cb: () => void) => {
-    const fn = () => cb();
+  onUpdaterProgress: (
+    cb: (p: {
+      percent: number;
+      bytesPerSecond: number;
+      transferred: number;
+      total: number;
+    }) => void,
+  ) => {
+    const fn = (
+      _: unknown,
+      p: { percent: number; bytesPerSecond: number; transferred: number; total: number },
+    ) => cb(p);
+    ipcRenderer.on("updater:progress", fn);
+    return () => ipcRenderer.removeListener("updater:progress", fn);
+  },
+  onUpdaterDownloaded: (cb: (p: { version: string }) => void) => {
+    const fn = (_: unknown, p: { version: string }) => cb(p);
     ipcRenderer.on("updater:downloaded", fn);
     return () => ipcRenderer.removeListener("updater:downloaded", fn);
+  },
+  onUpdaterError: (cb: (p: { message: string }) => void) => {
+    const fn = (_: unknown, p: { message: string }) => cb(p);
+    ipcRenderer.on("updater:error", fn);
+    return () => ipcRenderer.removeListener("updater:error", fn);
   },
 };
 

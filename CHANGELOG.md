@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-03-27
+
+### Changed
+
+- Sidebar footer hint text replaced with author credit (`HyIsNoob - 2026`) for a smaller UI tweak.
+
 ## [1.3.0] - 2026-03-27
 
 ### Added

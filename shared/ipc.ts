@@ -54,7 +54,7 @@ export interface VideoMetaDisplay {
   uploadDate: string | null;
   uploader: string | null;
   webpageUrl: string;
-  platform: "youtube" | "tiktok" | "unknown";
+  platform: "youtube" | "tiktok" | "facebook" | "unknown";
 }
 
 export interface FormatOption {

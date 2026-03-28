@@ -110,7 +110,16 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
     if (!autoFetch) return;
     const t = window.setTimeout(() => {
       if (!url.trim() || !url.includes("http")) return;
-      if (!url.includes("youtube") && !url.includes("youtu.be") && !url.includes("tiktok")) return;
+      if (
+        !url.includes("youtube") &&
+        !url.includes("youtu.be") &&
+        !url.includes("tiktok") &&
+        !url.includes("facebook") &&
+        !url.includes("fb.watch") &&
+        !url.includes("fb.com")
+      ) {
+        return;
+      }
       void fetchNow();
     }, 700);
     return () => window.clearTimeout(t);
@@ -181,7 +190,7 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
               whileFocus={{ scale: 1.005 }}
               transition={{ duration: 0.15 }}
               className="min-w-[240px] flex-1 border-4 border-[#111] bg-white px-3 py-2.5 font-semibold outline-none ring-0 focus:border-[#111] focus:shadow-[4px_4px_0_0_#111]"
-              placeholder="YouTube or TikTok video URL"
+              placeholder="YouTube, TikTok, or Facebook video / reel URL"
             />
             <motion.button
               type="button"

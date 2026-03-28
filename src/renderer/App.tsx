@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { History, Home, Layers, ListVideo, Settings } from "lucide-react";
 import { DownloadCompleteModal } from "./components/DownloadCompleteModal";
 import { DuplicateFileModal } from "./components/DuplicateFileModal";
+import { UpdateModal } from "./components/UpdateModal";
 import { TransitionOverlay } from "./components/TransitionOverlay";
 import { Home as HomePage } from "./pages/Home";
 import { Queue } from "./pages/Queue";
@@ -14,6 +15,7 @@ import { useHomeUrlStore } from "./store/homeUrl";
 import { useSettingsStore } from "./store/settingsUi";
 import { extractFirstYtOrTiktokUrlAny } from "./lib/url";
 import type { DuplicateAskPayload, TabId } from "@shared/ipc";
+import { useUpdateUiStore } from "./store/updateUi";
 
 const tabs: Array<{
   id: TabId;
@@ -67,19 +69,32 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const openAvailable = useUpdateUiStore.getState().openAvailable;
+    const setProgress = useUpdateUiStore.getState().setProgress;
+    const setReady = useUpdateUiStore.getState().setReady;
+    const setError = useUpdateUiStore.getState().setError;
     const offA = window.omnidl.onUpdaterAvailable((info) => {
-      if (confirm(`Update available: ${info.version}. Download?`)) {
-        void window.omnidl.updaterDownload();
+      openAvailable(info.version);
+    });
+    const offP = window.omnidl.onUpdaterProgress((p) => {
+      if (useUpdateUiStore.getState().phase === "downloading") {
+        setProgress(p);
       }
     });
-    const offD = window.omnidl.onUpdaterDownloaded(() => {
-      if (confirm("Update downloaded. Restart now?")) {
-        void window.omnidl.updaterQuitAndInstall();
+    const offD = window.omnidl.onUpdaterDownloaded((info) => {
+      setReady(info.version || "—");
+    });
+    const offE = window.omnidl.onUpdaterError((e) => {
+      const phase = useUpdateUiStore.getState().phase;
+      if (phase === "downloading") {
+        setError(e.message);
       }
     });
     return () => {
       offA();
+      offP();
       offD();
+      offE();
     };
   }, []);
 
@@ -114,6 +129,7 @@ export default function App() {
 
   return (
     <div className="flex h-screen min-h-0 bg-[#e8dcc8] text-[#111]">
+      <UpdateModal />
       <DuplicateFileModal
         open={dupAsk != null}
         predictedPath={dupAsk?.predictedPath ?? ""}
@@ -167,7 +183,7 @@ export default function App() {
             <div className="min-w-0">
               <div className="font-display text-xl font-normal leading-tight tracking-brutal">OmniDL</div>
               <div className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">
-                YouTube · TikTok
+                YouTube · TikTok · Facebook
               </div>
             </div>
           </motion.div>
@@ -199,7 +215,7 @@ export default function App() {
           <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Build</div>
           <div className="mt-1 font-mono text-xs text-neutral-400">{appVersion || "—"}</div>
           <div className="mt-2 text-[10px] leading-relaxed text-neutral-600">
-            Kéo giữa vùng nội dung để cuộn. Sidebar cố định để luôn thấy điều hướng.
+            HyIsNoob - 2026
           </div>
         </div>
       </aside>

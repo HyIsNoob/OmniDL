@@ -21,6 +21,7 @@ import {
   resumeJob,
 } from "./queue.js";
 import { normalizeVideoUrl } from "./url.js";
+import { formatYtdlpUserMessage } from "./ytdlp-errors.js";
 import {
   ensureYtdlp,
   getLatestYtdlpTag,
@@ -49,7 +50,7 @@ export function registerIpc(isDev: boolean): void {
       ["-J", "--no-playlist", "--no-warnings", url],
       { maxBuffer: 80 * 1024 * 1024 },
     );
-    if (code !== 0) throw new Error(stderr || `yt-dlp failed (${code})`);
+    if (code !== 0) throw new Error(formatYtdlpUserMessage(stderr, code));
     return buildVideoPayload(stdout);
   });
 
@@ -63,7 +64,7 @@ export function registerIpc(isDev: boolean): void {
         ["-J", "--flat-playlist", "--playlist-end", String(lim), "--no-warnings", url],
         { maxBuffer: 80 * 1024 * 1024 },
       );
-      if (code !== 0) throw new Error(stderr || `yt-dlp failed (${code})`);
+      if (code !== 0) throw new Error(formatYtdlpUserMessage(stderr, code));
       return buildPlaylistPayload(stdout);
     },
   );
