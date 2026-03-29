@@ -1,15 +1,60 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { chmodSync, createWriteStream, existsSync, mkdirSync } from "node:fs";
+import { chmodSync, copyFileSync, createWriteStream, existsSync, mkdirSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import ffmpegStatic from "ffmpeg-static";
 
+const require = createRequire(import.meta.url);
+
 let ytdlpPathCache = "";
 let binDirCache = "";
+let userDataRoot = "";
+
+function ffprobeBinaryPath(): string | null {
+  try {
+    const m = require("ffprobe-static") as { path: string };
+    return typeof m.path === "string" && m.path.length > 0 ? m.path : null;
+  } catch {
+    return null;
+  }
+}
+
+function ffmpegBundleDir(): string {
+  return join(userDataRoot, "ffmpeg-bin");
+}
+
+function ensureFfmpegFfprobeBundle(): void {
+  if (!userDataRoot || !ffmpegStatic) return;
+  const ffprobeSrc = ffprobeBinaryPath();
+  if (!ffprobeSrc || !existsSync(ffprobeSrc)) return;
+  const destDir = ffmpegBundleDir();
+  mkdirSync(destDir, { recursive: true });
+  const exe = process.platform === "win32" ? ".exe" : "";
+  const destFfmpeg = join(destDir, `ffmpeg${exe}`);
+  const destFfprobe = join(destDir, `ffprobe${exe}`);
+  if (existsSync(destFfmpeg) && existsSync(destFfprobe)) return;
+  copyFileSync(ffmpegStatic, destFfmpeg);
+  copyFileSync(ffprobeSrc, destFfprobe);
+  if (process.platform !== "win32") {
+    try {
+      chmodSync(destFfmpeg, 0o755);
+      chmodSync(destFfprobe, 0o755);
+    } catch {
+      /* ignore */
+    }
+  }
+}
 
 export function setBinDir(userData: string): void {
+  userDataRoot = userData;
   binDirCache = join(userData, "bin");
   mkdirSync(binDirCache, { recursive: true });
   ytdlpPathCache = join(binDirCache, process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp");
+  try {
+    ensureFfmpegFfprobeBundle();
+  } catch {
+    /* ignore */
+  }
 }
 
 export function getYtdlpPath(): string {
@@ -17,6 +62,18 @@ export function getYtdlpPath(): string {
 }
 
 export function getFfmpegLocation(): string | undefined {
+  if (userDataRoot && ffmpegStatic) {
+    try {
+      ensureFfmpegFfprobeBundle();
+    } catch {
+      /* ignore */
+    }
+    const bundled = ffmpegBundleDir();
+    const exe = process.platform === "win32" ? ".exe" : "";
+    if (existsSync(join(bundled, `ffmpeg${exe}`)) && existsSync(join(bundled, `ffprobe${exe}`))) {
+      return bundled;
+    }
+  }
   if (!ffmpegStatic) return undefined;
   return dirname(ffmpegStatic);
 }

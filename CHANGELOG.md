@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.3] - 2026-03-29
+
+### Fixed
+
+- **Packaged app (NSIS / portable)**: **`ffmpeg-static` ships ffmpeg only**, while yt-dlp post-processors need **ffprobe** in the same directory. Added **`ffprobe-static`**, **`asarUnpack`** for its binaries, and on startup **copy ffmpeg + ffprobe** into **`%AppData%/OmniDL/ffmpeg-bin/`** (or equivalent) so **`--ffmpeg-location`** points at a folder that contains both tools (fixes *ffprobe and ffmpeg not found* after merge / AAC).
+
 ## [1.4.2] - 2026-03-28
 
 ### Changed
