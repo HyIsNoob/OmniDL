@@ -87,6 +87,10 @@ Output is written to `release/` (gitignored).
 
 `build.publish` in `package.json` points at GitHub. After a release is published, the app uses `electron-updater` against that feed. Code signing may be required for strict Windows SmartScreen policies depending on your environment.
 
+## Disclaimer
+
+OmniDL is intended for **personal, educational use only**. Users are responsible for complying with applicable **copyright laws** and the **Terms of Service** of any platform they access.
+
 ## License
 
 MIT

@@ -195,6 +195,14 @@ export function Options() {
           ) : null}
         </div>
       </BrutalPanel>
+
+      <BrutalPanel className="border-dashed border-[#111] bg-neutral-100/90 p-5">
+        <div className="text-xs font-black uppercase tracking-[0.2em] text-neutral-500">Disclaimer</div>
+        <p className="mt-3 text-sm font-semibold leading-relaxed text-neutral-800">
+          OmniDL is intended for personal, educational use only. Users are responsible for complying with
+          applicable copyright laws and the Terms of Service of any platform they access.
+        </p>
+      </BrutalPanel>
     </div>
   );
 }

@@ -246,7 +246,7 @@ export default function App() {
               {tab === "queue" && "Downloads · pause / cancel"}
               {tab === "playlist" && "Playlist · batch enqueue"}
               {tab === "history" && "Completed · open folder"}
-              {tab === "options" && "Clipboard · updates"}
+              {tab === "options" && "Clipboard · updates · disclaimer"}
               {tab === "instruction" && "Errors · queue · formats"}
             </span>
           </div>

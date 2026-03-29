@@ -230,6 +230,16 @@ export function Instruction() {
           </BrutalPanel>
         </div>
       </motion.div>
+
+      <motion.div variants={item}>
+        <BrutalPanel className="border-dashed border-[#111] bg-neutral-100/90 p-5 sm:p-6">
+          <h2 className="font-display text-sm font-normal uppercase tracking-brutal text-[#111]">Disclaimer</h2>
+          <p className="mt-3 text-sm font-bold leading-relaxed text-neutral-800">
+            OmniDL is intended for personal, educational use only. Users are responsible for complying with
+            applicable copyright laws and the Terms of Service of any platform they access.
+          </p>
+        </BrutalPanel>
+      </motion.div>
     </motion.div>
   );
 }
