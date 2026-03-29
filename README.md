@@ -23,35 +23,40 @@ OmniDL wraps **yt-dlp** and **FFmpeg** in a focused UI: paste a link, pick a for
 
 Paste a **YouTube** or **TikTok** video URL, run **Fetch** to load title, duration, and format ladder (with rough size hints). Choose **video** or **audio**, pick a quality preset, set output folder, then **Add to queue** (next or end). **Auto-fetch** (in Options) can run Fetch automatically when the URL field changes.
 
-<img width="1919" height="984" alt="image" src="https://github.com/user-attachments/assets/e5da5763-7624-4813-aaaf-1c3685680305" />
+<img width="1919" height="979" alt="image" src="https://github.com/user-attachments/assets/22fad822-3f14-4894-a4c1-52b384c11c38" />
+
 
 
 ### Queue
 
 Runs downloads **one at a time** with progress, speed, and ETA. **Pause**, **resume**, or **cancel** the active job; queued items wait in order. Uses **ffmpeg-static** for merge when needed.
 
-<img width="1907" height="967" alt="image" src="https://github.com/user-attachments/assets/f4e70853-12a4-4f73-846c-ae96d241a449" />
+<img width="1919" height="987" alt="image" src="https://github.com/user-attachments/assets/8316afaa-c79f-475f-9a1e-06f14f674eeb" />
+
 
 
 ### Playlist (YouTube)
 
 Enter a **playlist** URL, set a **limit** (max entries), and **Get playlist** to list titles. Enqueue many items at once with your chosen default format mode (e.g. best video, 480p cap, best audio).
 
-<img width="1919" height="977" alt="image" src="https://github.com/user-attachments/assets/55a92519-fb0a-474c-9ca6-9e9b782170dd" />
+<img width="1919" height="977" alt="image" src="https://github.com/user-attachments/assets/484df7bd-e397-44c5-b789-f078cbb3b95c" />
+
 
 
 ### History
 
 Browse **past downloads**: titles, paths, and quick actions such as opening the output folder. Data is stored locally in the app user data directory.
 
-<img width="1919" height="991" alt="image" src="https://github.com/user-attachments/assets/e0410e7a-d146-4482-8d4d-74ae113daf7f" />
+<img width="1916" height="975" alt="image" src="https://github.com/user-attachments/assets/bf5b157c-be03-4492-b7e2-4706bc80ccad" />
+
 
 
 ### Options
 
 Configure **download directory**, **clipboard detection** (YouTube / TikTok video links; playlist-only URLs are ignored for Home paste), **auto-fetch**, **yt-dlp** version check and update, and **application updates** from GitHub.
 
-<img width="1919" height="978" alt="image" src="https://github.com/user-attachments/assets/08011c98-c2a4-4d92-b1dd-d430f45ee35e" />
+<img width="1919" height="976" alt="image" src="https://github.com/user-attachments/assets/3efe681e-ac5b-4f95-a394-a4cfdf07c56c" />
+
 
 
 ## Requirements
