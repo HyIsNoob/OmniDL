@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useTabContentStagger } from "../lib/tabContentMotion";
 import { Bell, Clipboard, RefreshCw, Sparkles } from "lucide-react";
 import { BrutalPanel } from "../components/BrutalPanel";
-import { useSettingsStore } from "../store/settingsUi";
+import { useSettingsStore, type AnimationLevel } from "../store/settingsUi";
 import { useUpdateUiStore } from "../store/updateUi";
 
 const btnHover =
@@ -14,10 +15,12 @@ export function Options() {
   const autoFetch = useSettingsStore((s) => s.autoFetch);
   const notificationsPush = useSettingsStore((s) => s.notificationsPush);
   const playlistFullThumbnails = useSettingsStore((s) => s.playlistFullThumbnails);
+  const animationLevel = useSettingsStore((s) => s.animationLevel);
   const setClipboardWatch = useSettingsStore((s) => s.setClipboardWatch);
   const setAutoFetch = useSettingsStore((s) => s.setAutoFetch);
   const setNotificationsPush = useSettingsStore((s) => s.setNotificationsPush);
   const setPlaylistFullThumbnails = useSettingsStore((s) => s.setPlaylistFullThumbnails);
+  const setAnimationLevel = useSettingsStore((s) => s.setAnimationLevel);
   const pendingInstall = useUpdateUiStore((s) => s.pendingInstall);
   const reopenInstall = useUpdateUiStore((s) => s.reopenInstall);
   const setUpdateError = useUpdateUiStore((s) => s.setError);
@@ -46,7 +49,13 @@ export function Options() {
   }
 
   return (
-    <div className="space-y-5">
+    <motion.div
+      className="space-y-5"
+      variants={stagger.root}
+      initial="hidden"
+      animate="show"
+    >
+      <motion.div variants={stagger.section}>
       <BrutalPanel className="p-5">
         <div className="flex items-center gap-2 text-lg font-black">
           <Clipboard className="h-6 w-6" strokeWidth={2} aria-hidden />
@@ -86,7 +95,44 @@ export function Options() {
           </span>
         </label>
       </BrutalPanel>
+      </motion.div>
 
+      <motion.div variants={stagger.section}>
+      <BrutalPanel className="p-5">
+        <div className="text-lg font-black">Motion</div>
+        <p className="mt-2 text-sm font-semibold text-neutral-600">
+          Full animation: spectrum loader, staggered panels on Home, Playlist, Queue, History, Options, and
+          Instruction, tab sweep, and a dimmed playlist fetch overlay. Reduced: instant tab content, no
+          stagger, darker playlist overlay without blur, static loading blocks (lower CPU/GPU).
+        </p>
+        <div className="mt-4 flex flex-col gap-2">
+          {(
+            [
+              ["full", "Full animation"],
+              ["reduced", "Reduced animation"],
+            ] as const
+          ).map(([value, title]) => (
+            <label
+              key={value}
+              className={`flex cursor-pointer items-start gap-3 border-4 border-[#111] p-3 font-bold transition-colors hover:bg-neutral-50 ${
+                animationLevel === value ? "bg-[#ffe66d]" : "bg-white"
+              }`}
+            >
+              <input
+                type="radio"
+                name="animationLevel"
+                className="mt-1 h-4 w-4"
+                checked={animationLevel === value}
+                onChange={() => void setAnimationLevel(value as AnimationLevel)}
+              />
+              <span className="font-black uppercase">{title}</span>
+            </label>
+          ))}
+        </div>
+      </BrutalPanel>
+      </motion.div>
+
+      <motion.div variants={stagger.section}>
       <BrutalPanel className="p-5">
         <div className="text-lg font-black">Playlist</div>
         <p className="mt-2 text-sm font-semibold text-neutral-600">
@@ -108,7 +154,9 @@ export function Options() {
           </span>
         </label>
       </BrutalPanel>
+      </motion.div>
 
+      <motion.div variants={stagger.section}>
       <BrutalPanel className="p-5">
         <div className="flex items-center gap-2 text-lg font-black">
           <Bell className="h-6 w-6" strokeWidth={2} aria-hidden />
@@ -132,7 +180,9 @@ export function Options() {
           </span>
         </label>
       </BrutalPanel>
+      </motion.div>
 
+      <motion.div variants={stagger.section}>
       <BrutalPanel className="p-5">
         <div className="flex items-center gap-2 text-lg font-black">
           <Sparkles className="h-6 w-6" strokeWidth={2} aria-hidden />
@@ -195,7 +245,9 @@ export function Options() {
           ) : null}
         </div>
       </BrutalPanel>
+      </motion.div>
 
+      <motion.div variants={stagger.section}>
       <BrutalPanel className="border-dashed border-[#111] bg-neutral-100/90 p-5">
         <div className="text-xs font-black uppercase tracking-[0.2em] text-neutral-500">Disclaimer</div>
         <p className="mt-3 text-sm font-semibold leading-relaxed text-neutral-800">
@@ -203,6 +255,7 @@ export function Options() {
           applicable copyright laws and the Terms of Service of any platform they access.
         </p>
       </BrutalPanel>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

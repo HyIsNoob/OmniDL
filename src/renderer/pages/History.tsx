@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { FolderOpen, Trash2 } from "lucide-react";
 import type { HistoryRow } from "@shared/ipc";
 import { BrutalPanel } from "../components/BrutalPanel";
+import { useTabContentStagger } from "../lib/tabContentMotion";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { HistoryThumb } from "../components/HistoryThumb";
 
@@ -17,6 +18,7 @@ type Pending =
   | null;
 
 export function History() {
+  const stagger = useTabContentStagger();
   const [rows, setRows] = useState<HistoryRow[]>([]);
   const [pending, setPending] = useState<Pending>(null);
   const [page, setPage] = useState(1);
@@ -42,7 +44,12 @@ export function History() {
   }, [rows.length]);
 
   return (
-    <div className="space-y-5">
+    <motion.div
+      className="space-y-5"
+      variants={stagger.root}
+      initial="hidden"
+      animate="show"
+    >
       <ConfirmModal
         open={pending !== null}
         title={pending?.type === "clear" ? "Clear all history?" : "Remove this entry?"}
@@ -61,7 +68,7 @@ export function History() {
             void window.omnidl.historyRemove(pending.id).then(reload);
         }}
       />
-      <div className="flex flex-wrap items-center justify-end gap-3">
+      <motion.div variants={stagger.section} className="flex flex-wrap items-center justify-end gap-3">
         <motion.button
           type="button"
           whileHover={{ y: -2 }}
@@ -72,20 +79,22 @@ export function History() {
           <Trash2 className="h-4 w-4" strokeWidth={2} aria-hidden />
           Clear all
         </motion.button>
-      </div>
+      </motion.div>
       {!rows.length && (
-        <BrutalPanel className="p-8 text-center font-bold text-neutral-500">Empty</BrutalPanel>
+        <motion.div variants={stagger.section}>
+          <BrutalPanel className="p-8 text-center font-bold text-neutral-500">Empty</BrutalPanel>
+        </motion.div>
       )}
-      <ul className="space-y-3">
+      <motion.ul variants={stagger.grid} initial="hidden" animate="show" className="space-y-3">
         <AnimatePresence initial={false}>
           {slice.map((h) => (
             <motion.li
               key={h.id}
               layout
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
+              variants={stagger.listItem}
+              initial="hidden"
+              animate="show"
               exit={{ opacity: 0, x: -12, transition: { duration: 0.2 } }}
-              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             >
               <BrutalPanel className="p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -130,9 +139,9 @@ export function History() {
             </motion.li>
           ))}
         </AnimatePresence>
-      </ul>
+      </motion.ul>
       {rows.length > PAGE ? (
-        <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-black uppercase">
+        <motion.div variants={stagger.section} className="flex flex-wrap items-center justify-center gap-2 text-xs font-black uppercase">
           <button
             type="button"
             disabled={pageClamped <= 1}
@@ -152,8 +161,8 @@ export function History() {
           >
             Next
           </button>
-        </div>
+        </motion.div>
       ) : null}
-    </div>
+    </motion.div>
   );
 }

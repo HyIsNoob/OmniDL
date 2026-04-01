@@ -35,6 +35,7 @@ const tabs: Array<{
 export default function App() {
   const tab = useAppStore((s) => s.tab);
   const setTab = useAppStore((s) => s.setTab);
+  const transitionLocked = useAppStore((s) => s.transitionLocked);
   const overlayOn = useAppStore((s) => s.overlayOn);
   const sweep = useAppStore((s) => s.sweep);
   const transitionLabel = useAppStore((s) => s.transitionLabel);
@@ -42,6 +43,7 @@ export default function App() {
   const setUrl = useHomeUrlStore((s) => s.setUrl);
   const lastClip = useRef("");
   const clipboardWatch = useSettingsStore((s) => s.clipboardWatch);
+  const animationFull = useSettingsStore((s) => s.animationLevel === "full");
   const hydrate = useSettingsStore((s) => s.hydrate);
   const [appVersion, setAppVersion] = useState("");
   const [downloadDone, setDownloadDone] = useState<{ title: string; path: string } | null>(null);
@@ -64,11 +66,16 @@ export default function App() {
     const off = window.omnidl.onDownloadDone((p) => {
       setDownloadDone({ title: p.title, path: p.path });
     });
-    return off;
+    return () => {
+      off();
+    };
   }, []);
 
   useEffect(() => {
-    return window.omnidl.onDuplicateAsk((p) => setDupAsk(p));
+    const off = window.omnidl.onDuplicateAsk((p) => setDupAsk(p));
+    return () => {
+      off();
+    };
   }, []);
 
   useEffect(() => {
@@ -203,8 +210,9 @@ export default function App() {
               <button
                 key={t.id}
                 type="button"
+                disabled={transitionLocked}
                 onClick={() => setTab(t.id)}
-                className={`font-display flex w-full items-center gap-3 rounded-none border-4 px-3 py-3 text-left text-sm font-normal uppercase tracking-brutal transition-colors ${
+                className={`font-display flex w-full items-center gap-3 rounded-none border-4 px-3 py-3 text-left text-sm font-normal uppercase tracking-brutal transition-colors disabled:pointer-events-none disabled:opacity-40 ${
                   active
                     ? "border-[#faf8f3] bg-[#faf8f3] text-[#111] shadow-[4px_4px_0_0_rgba(250,248,243,0.25)]"
                     : "border-transparent bg-transparent text-[#d4d4d4] hover:border-[#444] hover:bg-[#1e1e1e]"
@@ -255,21 +263,35 @@ export default function App() {
         <main className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
           <div className="mx-auto max-w-[1400px]">
             <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={tab}
-                role="tabpanel"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-              >
-                {tab === "home" && <HomePage url={url} setUrl={setUrl} />}
-                {tab === "queue" && <Queue />}
-                {tab === "playlist" && <Playlist />}
-                {tab === "history" && <HistoryPage />}
-                {tab === "instruction" && <Instruction />}
-                {tab === "options" && <Options />}
-              </motion.div>
+              {animationFull ? (
+                <div key={tab} role="tabpanel">
+                  {tab === "home" && <HomePage url={url} setUrl={setUrl} />}
+                  {tab === "queue" && <Queue />}
+                  {tab === "playlist" && <Playlist />}
+                  {tab === "history" && <HistoryPage />}
+                  {tab === "instruction" && <Instruction />}
+                  {tab === "options" && <Options />}
+                </div>
+              ) : (
+                <motion.div
+                  key={tab}
+                  role="tabpanel"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{
+                    duration: 0.09,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                >
+                  {tab === "home" && <HomePage url={url} setUrl={setUrl} />}
+                  {tab === "queue" && <Queue />}
+                  {tab === "playlist" && <Playlist />}
+                  {tab === "history" && <HistoryPage />}
+                  {tab === "instruction" && <Instruction />}
+                  {tab === "options" && <Options />}
+                </motion.div>
+              )}
             </AnimatePresence>
           </div>
         </main>

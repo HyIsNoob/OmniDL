@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, Music, Pause, Play, Trash2, X } from "lucide-react";
 import type { QueueJob, QueueState } from "@shared/ipc";
 import { BrutalPanel } from "../components/BrutalPanel";
+import { useTabContentStagger } from "../lib/tabContentMotion";
 import { ConfirmModal } from "../components/ConfirmModal";
 
 const PAGE = 10;
@@ -38,6 +39,7 @@ function QueueThumb({ job }: { job: QueueJob }) {
 }
 
 export function Queue() {
+  const stagger = useTabContentStagger();
   const [state, setState] = useState<QueueState | null>(null);
   const [pending, setPending] = useState<Pending>(null);
   const [page, setPage] = useState(1);
@@ -45,7 +47,9 @@ export function Queue() {
   useEffect(() => {
     void window.omnidl.queueGetState().then(setState);
     const off = window.omnidl.onQueueUpdate(setState);
-    return off;
+    return () => {
+      off();
+    };
   }, []);
 
   const jobs = state?.jobs ?? EMPTY_JOBS;
@@ -66,7 +70,12 @@ export function Queue() {
   }, [jobs.length]);
 
   return (
-    <div className="space-y-5">
+    <motion.div
+      className="space-y-5"
+      variants={stagger.root}
+      initial="hidden"
+      animate="show"
+    >
       <ConfirmModal
         open={pending !== null}
         title={pending?.type === "clear" ? "Clear finished?" : "Cancel download?"}
@@ -86,7 +95,7 @@ export function Queue() {
           else if (pending?.type === "cancel") void window.omnidl.queueCancel(pending.id);
         }}
       />
-      <div className="flex flex-wrap items-center justify-end gap-3">
+      <motion.div variants={stagger.section} className="flex flex-wrap items-center justify-end gap-3">
         <motion.button
           type="button"
           whileHover={{ y: -2 }}
@@ -97,20 +106,22 @@ export function Queue() {
           <Trash2 className="h-4 w-4" strokeWidth={2} aria-hidden />
           Clear finished
         </motion.button>
-      </div>
+      </motion.div>
       {!jobs.length && (
-        <BrutalPanel className="p-8 text-center font-bold text-neutral-500">Empty</BrutalPanel>
+        <motion.div variants={stagger.section}>
+          <BrutalPanel className="p-8 text-center font-bold text-neutral-500">Empty</BrutalPanel>
+        </motion.div>
       )}
-      <ul className="space-y-3">
+      <motion.ul variants={stagger.grid} initial="hidden" animate="show" className="space-y-3">
         <AnimatePresence initial={false}>
           {slice.map((j) => (
             <motion.li
               key={j.id}
               layout
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
+              variants={stagger.listItem}
+              initial="hidden"
+              animate="show"
               exit={{ opacity: 0, x: 14, transition: { duration: 0.2 } }}
-              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             >
               <div className="block w-full text-left">
                 <BrutalPanel className="p-4">
@@ -214,9 +225,9 @@ export function Queue() {
             </motion.li>
           ))}
         </AnimatePresence>
-      </ul>
+      </motion.ul>
       {jobs.length > PAGE ? (
-        <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-black uppercase">
+        <motion.div variants={stagger.section} className="flex flex-wrap items-center justify-center gap-2 text-xs font-black uppercase">
           <button
             type="button"
             disabled={pageClamped <= 1}
@@ -236,8 +247,8 @@ export function Queue() {
           >
             Next
           </button>
-        </div>
+        </motion.div>
       ) : null}
-    </div>
+    </motion.div>
   );
 }

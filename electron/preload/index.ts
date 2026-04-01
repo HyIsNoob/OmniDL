@@ -21,6 +21,17 @@ const api = {
     ipcRenderer.invoke("yt:fetchPlaylist", { url, limit }) as Promise<PlaylistInfoPayload>,
   fetchVideoThumb: (url: string) =>
     ipcRenderer.invoke("yt:fetchVideoThumb", url) as Promise<string | null>,
+  thumbnailSaveAs: (payload: { url: string; defaultName: string }) =>
+    ipcRenderer.invoke("thumbnail:saveAs", payload) as Promise<{
+      ok: boolean;
+      path: string | null;
+    }>,
+  thumbnailsSaveBulkToFolder: (items: { url: string; fileName: string }[]) =>
+    ipcRenderer.invoke("thumbnails:saveBulkToFolder", items) as Promise<{
+      ok: boolean;
+      count: number;
+      folder: string | null;
+    }>,
   duplicateRespond: (p: { jobId: string; choice: DuplicateChoice }) => {
     ipcRenderer.send("duplicate:respond", p);
   },

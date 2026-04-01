@@ -1,4 +1,5 @@
 import { app, clipboard, dialog, ipcMain, shell } from "electron";
+import { downloadThumbnail, sanitizeThumbFileName } from "./thumbnail.js";
 import { autoUpdater } from "./updater.js";
 import { existsSync, readFileSync, unlinkSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
@@ -79,6 +80,45 @@ export function registerIpc(isDev: boolean): void {
     if (code !== 0) return null;
     return thumbnailFromVideoJson(stdout);
   });
+
+  ipcMain.handle(
+    "thumbnail:saveAs",
+    async (_e, payload: { url: string; defaultName: string }) => {
+      const u = payload.url.trim();
+      if (!u.startsWith("http")) return { ok: false as const, path: null as string | null };
+      const name = sanitizeThumbFileName(payload.defaultName || "thumb.jpg");
+      const r = await dialog.showSaveDialog({
+        defaultPath: join(app.getPath("downloads"), name),
+        filters: [
+          { name: "Images", extensions: ["jpg", "jpeg", "png", "webp", "gif"] },
+          { name: "All", extensions: ["*"] },
+        ],
+      });
+      if (r.canceled || !r.filePath) return { ok: false as const, path: null as string | null };
+      const ok = await downloadThumbnail(u, r.filePath);
+      return { ok, path: r.filePath };
+    },
+  );
+
+  ipcMain.handle(
+    "thumbnails:saveBulkToFolder",
+    async (_e, items: { url: string; fileName: string }[]) => {
+      if (!items.length) return { ok: false as const, count: 0, folder: null as string | null };
+      const r = await dialog.showOpenDialog({
+        properties: ["openDirectory", "createDirectory"],
+      });
+      if (r.canceled || !r.filePaths[0]) return { ok: false as const, count: 0, folder: null };
+      const folder = r.filePaths[0];
+      let count = 0;
+      for (const it of items) {
+        const u = it.url.trim();
+        if (!u.startsWith("http")) continue;
+        const dest = join(folder, sanitizeThumbFileName(it.fileName));
+        if (await downloadThumbnail(u, dest)) count++;
+      }
+      return { ok: true as const, count, folder };
+    },
+  );
 
   ipcMain.on(
     "duplicate:respond",

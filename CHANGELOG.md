@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-04-01
+
+### Added
+
+- **History / playlist thumbnails**: cache and UI thumbnails; **Save as** and bulk folder actions where supported.
+- **Download complete** modal after a finished download.
+- **Tab content motion**: staggered entrance on Home, Playlist, Queue, History, Options, and Instruction when **Full** animation is enabled; **Reduced** skips heavy stagger.
+- **Playlist fetch overlay**: darker backdrop with light blur for readability; **Reduced** uses a darker flat overlay without blur.
+
+### Changed
+
+- **Tab transitions**: sidebar stays usable—no extra lock after the sweep; destination can be **queued** during the overlay so rapid clicks land on the last chosen tab without a dead zone after the new page is visible.
+
 ## [1.4.4] - 2026-03-29
 
 ### Added

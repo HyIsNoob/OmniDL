@@ -1,6 +1,11 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
+export function sanitizeThumbFileName(name: string): string {
+  const base = name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_").trim() || "thumb";
+  return base.slice(0, 180);
+}
+
 export async function downloadThumbnail(url: string, destPath: string): Promise<boolean> {
   if (!url.startsWith("http")) return false;
   try {

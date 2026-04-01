@@ -1,38 +1,116 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Download, FolderOpen, Layers, Link2, Loader2, Music, Video } from "lucide-react";
-import type { FormatOption, QueueJob, VideoInfoPayload } from "@shared/ipc";
+import type { FormatOption, QueueJob } from "@shared/ipc";
 import { formatBytes, formatDuration } from "../lib/format";
 import { useSettingsStore } from "../store/settingsUi";
-import { useFetchOverlayStore } from "../store/fetchOverlay";
+import { useHomeFetchUiStore } from "../store/homeFetchUi";
+import { useSessionFetchStore } from "../store/sessionFetch";
 import { BrutalPanel } from "../components/BrutalPanel";
-
-const infoContainer = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.07, delayChildren: 0.04 },
-  },
-};
-
-const infoBlock = {
-  hidden: { opacity: 0, y: 14 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.32, ease: [0.22, 1, 0.36, 1] } },
-};
+import { HomeFetchWidget } from "../components/HomeFetchWidget";
 
 const btnMotion =
   "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#111] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none";
 
 export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void }) {
   const autoFetch = useSettingsStore((s) => s.autoFetch);
-  const [loading, setLoading] = useState(false);
+  const animationFull = useSettingsStore((s) => s.animationLevel === "full");
+  const setFetching = useHomeFetchUiStore((s) => s.setFetching);
+  const setFetchSuccess = useHomeFetchUiStore((s) => s.setFetchSuccess);
+  const setFetchError = useHomeFetchUiStore((s) => s.setFetchError);
+  const releaseFetchUi = useHomeFetchUiStore((s) => s.release);
+  const fetchInFlight = useHomeFetchUiStore((s) => s.inFlight);
+
+  const infoContainer = useMemo(
+    () => ({
+      hidden: { opacity: 0 },
+      show: {
+        opacity: 1,
+        transition: {
+          staggerChildren: animationFull ? 0.07 : 0.02,
+          delayChildren: animationFull ? 0.04 : 0,
+        },
+      },
+    }),
+    [animationFull],
+  );
+
+  const infoBlock = useMemo(
+    () => ({
+      hidden: { opacity: 0, y: animationFull ? 14 : 6 },
+      show: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: animationFull ? 0.28 : 0.12, ease: [0.22, 1, 0.36, 1] },
+      },
+    }),
+    [animationFull],
+  );
+
+  const formatPanelRoot = useMemo(
+    () => ({
+      hidden: { opacity: 0 },
+      show: {
+        opacity: 1,
+        transition: {
+          staggerChildren: animationFull ? 0.065 : 0.038,
+          delayChildren: animationFull ? 0.05 : 0.03,
+        },
+      },
+    }),
+    [animationFull],
+  );
+
+  const formatPanelSection = useMemo(
+    () => ({
+      hidden: { opacity: 0, y: animationFull ? 12 : 6 },
+      show: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: animationFull ? 0.26 : 0.13, ease: [0.22, 1, 0.36, 1] },
+      },
+    }),
+    [animationFull],
+  );
+
+  const formatListRoot = useMemo(
+    () => ({
+      hidden: { opacity: 0 },
+      show: {
+        opacity: 1,
+        transition: {
+          staggerChildren: animationFull ? 0.038 : 0.022,
+          delayChildren: animationFull ? 0.015 : 0.008,
+        },
+      },
+    }),
+    [animationFull],
+  );
+
+  const formatListItem = useMemo(
+    () => ({
+      hidden: { opacity: 0, y: animationFull ? 8 : 4 },
+      show: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: animationFull ? 0.2 : 0.11, ease: [0.22, 1, 0.36, 1] },
+      },
+    }),
+    [animationFull],
+  );
+
   const [err, setErr] = useState<string | null>(null);
-  const [info, setInfo] = useState<VideoInfoPayload | null>(null);
-  const [sel, setSel] = useState<FormatOption | null>(null);
-  const [kind, setKind] = useState<"video" | "audio">("video");
+  const info = useSessionFetchStore((s) => s.homeVideo);
+  const homeSelId = useSessionFetchStore((s) => s.homeSelId);
+  const kind = useSessionFetchStore((s) => s.homeKind);
+  const audioSel = useSessionFetchStore((s) => s.homeAudioSel);
+  const setHomeSession = useSessionFetchStore((s) => s.setHomeSession);
+  const setHomeSelId = useSessionFetchStore((s) => s.setHomeSelId);
+  const setHomeKind = useSessionFetchStore((s) => s.setHomeKind);
+  const setHomeAudioSel = useSessionFetchStore((s) => s.setHomeAudioSel);
+  const clearHomeSession = useSessionFetchStore((s) => s.clearHomeSession);
   const [outDir, setOutDir] = useState<string>("");
   const [trackedJob, setTrackedJob] = useState<QueueJob | null>(null);
-  const [audioSel, setAudioSel] = useState<string>("best-audio");
   const [quickHint, setQuickHint] = useState<string | null>(null);
 
   const flashHint = useCallback((msg: string) => {
@@ -67,6 +145,27 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
   }, [loadDir]);
 
   useEffect(() => {
+    let cancel = false;
+    void (async () => {
+      const t = url.trim();
+      if (!t) {
+        clearHomeSession();
+        return;
+      }
+      const normalized = await window.omnidl.normalizeUrl(t);
+      const u = normalized || t;
+      if (cancel) return;
+      const st = useSessionFetchStore.getState();
+      if (st.homeFetchedUrl && u !== st.homeFetchedUrl) {
+        clearHomeSession();
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [url, clearHomeSession]);
+
+  useEffect(() => {
     const off = window.omnidl.onQueueUpdate((s) => {
       setTrackedJob((prev) => {
         if (!prev?.id) return prev;
@@ -83,36 +182,53 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
         return next;
       });
     });
-    return off;
+    return () => {
+      off();
+    };
   }, []);
-
-  const setFetchOverlay = useFetchOverlayStore((s) => s.setFetchOverlay);
 
   const fetchNow = useCallback(
     async (opts?: { silent?: boolean }) => {
       const silent = opts?.silent ?? false;
       setErr(null);
-      setLoading(true);
-      setInfo(null);
-      setSel(null);
-      setFetchOverlay(true, silent ? "Fetching…" : "Fetching video…", silent ? "silent" : "default");
+      const normalized = await window.omnidl.normalizeUrl(url.trim());
+      const u = normalized || url.trim();
+      if (silent) {
+        const st = useSessionFetchStore.getState();
+        if (st.homeFetchedUrl === u && st.homeVideo) return;
+      }
+      if (!silent) {
+        clearHomeSession();
+      }
+      setFetching();
       try {
-        const normalized = await window.omnidl.normalizeUrl(url.trim());
-        const u = normalized || url.trim();
         const data = await window.omnidl.fetchVideo(u);
-        setInfo(data);
         const first =
           data.options.find((o) => o.id === "best-video") ?? data.options[0] ?? null;
-        setSel(first);
-        setAudioSel("best-audio");
+        setHomeSession({
+          homeVideo: data,
+          homeFetchedUrl: u,
+          homeSelId: first?.id ?? null,
+          homeKind: "video",
+          homeAudioSel: "best-audio",
+        });
+        if (!silent) setFetchSuccess();
       } catch (e) {
         setErr(e instanceof Error ? e.message : String(e));
+        if (!silent) setFetchError();
       } finally {
-        setLoading(false);
-        setFetchOverlay(false);
+        if (silent) releaseFetchUi();
       }
     },
-    [url, setFetchOverlay],
+    [
+      url,
+      setFetching,
+      setFetchSuccess,
+      setFetchError,
+      releaseFetchUi,
+      clearHomeSession,
+      setHomeSession,
+    ],
   );
 
   useEffect(() => {
@@ -142,6 +258,14 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
     }
   };
 
+  const sel = useMemo((): FormatOption | null => {
+    if (!info) return null;
+    if (!homeSelId) {
+      return info.options.find((o) => o.id === "best-video") ?? info.options[0] ?? null;
+    }
+    return info.options.find((o) => o.id === homeSelId) ?? null;
+  }, [info, homeSelId]);
+
   const selectedOption = useMemo(() => {
     if (!info) return null;
     if (kind === "audio") {
@@ -160,6 +284,17 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
       (o) => o.id === "best-audio" || o.id === "audio-128" || o.id === "audio-320",
     );
   }, [info]);
+
+  const saveThumbnail = useCallback(async () => {
+    if (!info?.meta.thumbnail) return;
+    const base = (info.meta.title || "cover").slice(0, 120);
+    const r = await window.omnidl.thumbnailSaveAs({
+      url: info.meta.thumbnail,
+      defaultName: `${base}.jpg`,
+    });
+    if (r.ok) flashHint("Cover saved");
+    else flashHint(r.path ? "Save failed" : "Cancelled");
+  }, [info, flashHint]);
 
   const enqueue = async (mode: "next" | "end") => {
     if (!info || !selectedOption || !outDir) return;
@@ -182,7 +317,8 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
   };
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="relative flex flex-col gap-5">
+      <HomeFetchWidget />
       <motion.div layout initial={false} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
         <BrutalPanel className="p-5">
           <div className="flex items-center gap-2 text-sm font-black uppercase tracking-wide">
@@ -204,13 +340,13 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
             <motion.button
               type="button"
               onClick={() => void fetchNow()}
-              disabled={loading || !url.trim()}
-              whileHover={loading || !url.trim() ? undefined : { y: -2 }}
-              whileTap={loading || !url.trim() ? undefined : { scale: 0.98 }}
+              disabled={fetchInFlight || !url.trim()}
+              whileHover={fetchInFlight || !url.trim() ? undefined : { y: -2 }}
+              whileTap={fetchInFlight || !url.trim() ? undefined : { scale: 0.98 }}
               className={`inline-flex items-center gap-2 border-4 border-[#111] bg-[#ffe66d] px-4 py-2.5 font-black uppercase shadow-[4px_4px_0_0_#111] disabled:opacity-50 ${btnMotion}`}
             >
-              {loading ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : null}
-              {loading ? "Fetching" : "Fetch"}
+              {fetchInFlight ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : null}
+              {fetchInFlight ? "Fetching" : "Fetch"}
             </motion.button>
           </div>
           {err && (
@@ -240,24 +376,35 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
               <BrutalPanel className="p-5 lg:self-start">
                 <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start">
                   {info.meta.thumbnail ? (
-                    <motion.img
-                      layout
-                      initial={{ opacity: 0, scale: 0.98 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                      src={info.meta.thumbnail}
-                      alt=""
-                      className="h-36 w-64 shrink-0 border-4 border-[#111] object-cover"
-                    />
+                    <div className="flex shrink-0 flex-col gap-2">
+                      <motion.img
+                        layout
+                        initial={{ opacity: 0, y: animationFull ? 12 : 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: animationFull ? 0.26 : 0.14, ease: [0.22, 1, 0.36, 1] }}
+                        src={info.meta.thumbnail}
+                        alt=""
+                        className="h-36 w-64 border-4 border-[#111] object-cover"
+                      />
+                      <motion.button
+                        type="button"
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.18, delay: animationFull ? 0.08 : 0 }}
+                        whileHover={{ y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => void saveThumbnail()}
+                        className={`w-64 border-4 border-[#111] bg-[#a29bfe] px-2 py-2 text-center text-[11px] font-black uppercase tracking-wide shadow-[4px_4px_0_0_#111] ${btnMotion}`}
+                      >
+                        Download cover image
+                      </motion.button>
+                    </div>
                   ) : (
                     <motion.div
                       layout
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
                       className="h-36 w-64 shrink-0 border-4 border-[#111] bg-neutral-200"
-                      style={{
-                        backgroundImage: `repeating-linear-gradient(-45deg, transparent, transparent 6px, rgba(0,0,0,0.07) 6px, rgba(0,0,0,0.07) 12px)`,
-                      }}
                       aria-hidden
                     />
                   )}
@@ -409,140 +556,161 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
 
             <motion.div variants={infoBlock} className="contents">
               <BrutalPanel className="min-w-0 p-5">
-            <div className="flex gap-2">
-              <motion.button
-                type="button"
-                onClick={() => setKind("video")}
-                whileHover={{ y: -2 }}
-                whileTap={{ scale: 0.99 }}
-                className={`flex flex-1 items-center justify-center gap-2 border-4 border-[#111] px-3 py-2.5 font-black uppercase transition-colors ${
-                  kind === "video" ? "bg-[#4ecdc4]" : "bg-white hover:bg-neutral-100"
-                }`}
-              >
-                <Video className="h-5 w-5" strokeWidth={2} aria-hidden />
-                Video
-              </motion.button>
-              <motion.button
-                type="button"
-                onClick={() => setKind("audio")}
-                whileHover={{ y: -2 }}
-                whileTap={{ scale: 0.99 }}
-                className={`flex flex-1 items-center justify-center gap-2 border-4 border-[#111] px-3 py-2.5 font-black uppercase transition-colors ${
-                  kind === "audio" ? "bg-[#a29bfe]" : "bg-white hover:bg-neutral-100"
-                }`}
-              >
-                <Music className="h-5 w-5" strokeWidth={2} aria-hidden />
-                Audio
-              </motion.button>
-            </div>
-
-            {kind === "video" && (
-              <ul className="mt-3 max-h-64 space-y-2 overflow-auto pr-1">
-                {info.options
-                  .filter(
-                    (o) => o.id !== "best-audio" && o.id !== "audio-128" && o.id !== "audio-320",
-                  )
-                  .map((o) => (
-                    <li key={o.id}>
-                      <motion.label
-                        whileHover={{ x: 2 }}
-                        transition={{ duration: 0.15 }}
-                        className="flex cursor-pointer items-center justify-between gap-2 border-4 border-[#111] bg-white px-3 py-2 text-sm font-bold"
-                      >
-                        <span className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name="fmt"
-                            checked={sel?.id === o.id}
-                            onChange={() => setSel(o)}
-                          />
-                          {o.label}
-                        </span>
-                        <span className="text-xs text-neutral-600">
-                          {formatBytes(o.estimatedBytes)}
-                          {o.isEstimate ? " (est.)" : ""}
-                        </span>
-                      </motion.label>
-                    </li>
-                  ))}
-              </ul>
-            )}
-
-            {kind === "audio" && (
-              <ul className="mt-3 max-h-64 space-y-2 overflow-auto pr-1">
-                {audioOptions.map((o) => (
-                  <li key={o.id}>
-                    <motion.label
-                      whileHover={{ x: 2 }}
-                      transition={{ duration: 0.15 }}
-                      className="flex cursor-pointer items-center justify-between gap-2 border-4 border-[#111] bg-white px-3 py-2 text-sm font-bold"
-                    >
-                      <span className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          name="fmt-audio"
-                          checked={audioSel === o.id}
-                          onChange={() => setAudioSel(o.id)}
-                        />
-                        {o.label}
-                      </span>
-                      <span className="text-xs text-neutral-600">
-                        {formatBytes(o.estimatedBytes)}
-                        {o.isEstimate ? " (est.)" : ""}
-                      </span>
-                    </motion.label>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <div className="mt-4">
-              <div className="flex items-center gap-2 text-xs font-black uppercase">
-                <FolderOpen className="h-4 w-4" strokeWidth={2} aria-hidden />
-                Download folder
-              </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <div className="min-w-0 flex-1 truncate border-4 border-[#111] bg-white px-2 py-2 text-xs font-semibold">
-                  {outDir || "—"}
-                </div>
-                <motion.button
-                  type="button"
-                  onClick={() => void pickDir()}
-                  whileHover={{ y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`inline-flex items-center gap-2 border-4 border-[#111] bg-[#fab1a0] px-3 py-2 text-xs font-black uppercase shadow-[4px_4px_0_0_#111] ${btnMotion}`}
+                <motion.div
+                  key={`${info.meta.webpageUrl}-${kind}`}
+                  variants={formatPanelRoot}
+                  initial="hidden"
+                  animate="show"
+                  className="flex flex-col"
                 >
-                  <FolderOpen className="h-4 w-4" strokeWidth={2} aria-hidden />
-                  Browse
-                </motion.button>
-              </div>
-            </div>
+                  <motion.div variants={formatPanelSection} className="flex gap-2">
+                    <motion.button
+                      type="button"
+                      onClick={() => setHomeKind("video")}
+                      whileHover={{ y: -2 }}
+                      whileTap={{ scale: 0.99 }}
+                      className={`flex flex-1 items-center justify-center gap-2 border-4 border-[#111] px-3 py-2.5 font-black uppercase transition-colors ${
+                        kind === "video" ? "bg-[#4ecdc4]" : "bg-white hover:bg-neutral-100"
+                      }`}
+                    >
+                      <Video className="h-5 w-5" strokeWidth={2} aria-hidden />
+                      Video
+                    </motion.button>
+                    <motion.button
+                      type="button"
+                      onClick={() => setHomeKind("audio")}
+                      whileHover={{ y: -2 }}
+                      whileTap={{ scale: 0.99 }}
+                      className={`flex flex-1 items-center justify-center gap-2 border-4 border-[#111] px-3 py-2.5 font-black uppercase transition-colors ${
+                        kind === "audio" ? "bg-[#a29bfe]" : "bg-white hover:bg-neutral-100"
+                      }`}
+                    >
+                      <Music className="h-5 w-5" strokeWidth={2} aria-hidden />
+                      Audio
+                    </motion.button>
+                  </motion.div>
 
-            <div className="mt-4 flex w-full min-w-0 gap-2">
-              <motion.button
-                type="button"
-                disabled={!selectedOption || !outDir}
-                onClick={() => void enqueue("next")}
-                whileHover={selectedOption && outDir ? { y: -2 } : undefined}
-                whileTap={selectedOption && outDir ? { scale: 0.98 } : undefined}
-                className={`flex min-w-0 flex-1 items-center justify-center gap-2 border-4 border-[#111] bg-[#ff6b6b] px-3 py-2.5 font-black uppercase text-white shadow-[4px_4px_0_0_#111] disabled:opacity-50 ${btnMotion}`}
-              >
-                <Download className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
-                Download
-              </motion.button>
-              <motion.button
-                type="button"
-                disabled={!selectedOption || !outDir}
-                onClick={() => void enqueue("end")}
-                whileHover={selectedOption && outDir ? { y: -2 } : undefined}
-                whileTap={selectedOption && outDir ? { scale: 0.98 } : undefined}
-                className={`flex min-w-0 flex-1 items-center justify-center gap-2 border-4 border-[#111] bg-white px-3 py-2.5 font-black uppercase shadow-[4px_4px_0_0_#111] disabled:opacity-50 ${btnMotion}`}
-              >
-                <Layers className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
-                Add to queue
-              </motion.button>
-            </div>
-          </BrutalPanel>
+                  {kind === "video" ? (
+                    <motion.div variants={formatPanelSection} className="min-h-0">
+                      <motion.ul
+                        variants={formatListRoot}
+                        className="mt-3 max-h-64 list-none space-y-2 overflow-auto pr-1"
+                      >
+                        {info.options
+                          .filter(
+                            (o) =>
+                              o.id !== "best-audio" &&
+                              o.id !== "audio-128" &&
+                              o.id !== "audio-320",
+                          )
+                          .map((o) => (
+                            <motion.li key={o.id} variants={formatListItem}>
+                              <motion.label
+                                whileHover={{ x: 2 }}
+                                transition={{ duration: 0.15 }}
+                                className="flex cursor-pointer items-center justify-between gap-2 border-4 border-[#111] bg-white px-3 py-2 text-sm font-bold"
+                              >
+                                <span className="flex items-center gap-2">
+                                  <input
+                                    type="radio"
+                                    name="fmt"
+                                    checked={sel?.id === o.id}
+                                    onChange={() => setHomeSelId(o.id)}
+                                  />
+                                  {o.label}
+                                </span>
+                                <span className="text-xs text-neutral-600">
+                                  {formatBytes(o.estimatedBytes)}
+                                  {o.isEstimate ? " (est.)" : ""}
+                                </span>
+                              </motion.label>
+                            </motion.li>
+                          ))}
+                      </motion.ul>
+                    </motion.div>
+                  ) : null}
+
+                  {kind === "audio" ? (
+                    <motion.div variants={formatPanelSection} className="min-h-0">
+                      <motion.ul
+                        variants={formatListRoot}
+                        className="mt-3 max-h-64 list-none space-y-2 overflow-auto pr-1"
+                      >
+                        {audioOptions.map((o) => (
+                          <motion.li key={o.id} variants={formatListItem}>
+                            <motion.label
+                              whileHover={{ x: 2 }}
+                              transition={{ duration: 0.15 }}
+                              className="flex cursor-pointer items-center justify-between gap-2 border-4 border-[#111] bg-white px-3 py-2 text-sm font-bold"
+                            >
+                              <span className="flex items-center gap-2">
+                                <input
+                                  type="radio"
+                                  name="fmt-audio"
+                                  checked={audioSel === o.id}
+                                  onChange={() => setHomeAudioSel(o.id)}
+                                />
+                                {o.label}
+                              </span>
+                              <span className="text-xs text-neutral-600">
+                                {formatBytes(o.estimatedBytes)}
+                                {o.isEstimate ? " (est.)" : ""}
+                              </span>
+                            </motion.label>
+                          </motion.li>
+                        ))}
+                      </motion.ul>
+                    </motion.div>
+                  ) : null}
+
+                  <motion.div variants={formatPanelSection} className="mt-4">
+                    <div className="flex items-center gap-2 text-xs font-black uppercase">
+                      <FolderOpen className="h-4 w-4" strokeWidth={2} aria-hidden />
+                      Download folder
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <div className="min-w-0 flex-1 truncate border-4 border-[#111] bg-white px-2 py-2 text-xs font-semibold">
+                        {outDir || "—"}
+                      </div>
+                      <motion.button
+                        type="button"
+                        onClick={() => void pickDir()}
+                        whileHover={{ y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                        className={`inline-flex items-center gap-2 border-4 border-[#111] bg-[#fab1a0] px-3 py-2 text-xs font-black uppercase shadow-[4px_4px_0_0_#111] ${btnMotion}`}
+                      >
+                        <FolderOpen className="h-4 w-4" strokeWidth={2} aria-hidden />
+                        Browse
+                      </motion.button>
+                    </div>
+                  </motion.div>
+
+                  <motion.div variants={formatPanelSection} className="mt-4 flex w-full min-w-0 gap-2">
+                    <motion.button
+                      type="button"
+                      disabled={!selectedOption || !outDir}
+                      onClick={() => void enqueue("next")}
+                      whileHover={selectedOption && outDir ? { y: -2 } : undefined}
+                      whileTap={selectedOption && outDir ? { scale: 0.98 } : undefined}
+                      className={`flex min-w-0 flex-1 items-center justify-center gap-2 border-4 border-[#111] bg-[#ff6b6b] px-3 py-2.5 font-black uppercase text-white shadow-[4px_4px_0_0_#111] disabled:opacity-50 ${btnMotion}`}
+                    >
+                      <Download className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
+                      Download
+                    </motion.button>
+                    <motion.button
+                      type="button"
+                      disabled={!selectedOption || !outDir}
+                      onClick={() => void enqueue("end")}
+                      whileHover={selectedOption && outDir ? { y: -2 } : undefined}
+                      whileTap={selectedOption && outDir ? { scale: 0.98 } : undefined}
+                      className={`flex min-w-0 flex-1 items-center justify-center gap-2 border-4 border-[#111] bg-white px-3 py-2.5 font-black uppercase shadow-[4px_4px_0_0_#111] disabled:opacity-50 ${btnMotion}`}
+                    >
+                      <Layers className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
+                      Add to queue
+                    </motion.button>
+                  </motion.div>
+                </motion.div>
+              </BrutalPanel>
             </motion.div>
           </motion.div>
         ) : null}

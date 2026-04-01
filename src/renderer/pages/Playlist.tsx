@@ -1,18 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FolderOpen, ListVideo, Loader2, Plus } from "lucide-react";
 import type { PlaylistEntry, PlaylistInfoPayload } from "@shared/ipc";
+import { formatDuration } from "../lib/format";
+import { useTabContentStagger } from "../lib/tabContentMotion";
 import { BrutalPanel } from "../components/BrutalPanel";
 import { usePlaylistUrlStore } from "../store/playlistUrl";
 import { useFetchOverlayStore } from "../store/fetchOverlay";
 import { useSettingsStore } from "../store/settingsUi";
+import { useSessionFetchStore, type PlaylistMode } from "../store/sessionFetch";
 
 const btnHover =
   "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#111] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none";
 
-type PlMode = "480" | "bestv" | "besta";
-
-function selectorFor(mode: PlMode): { label: string; formatSelector: string; kind: "video" | "audio" } {
+function selectorFor(mode: PlaylistMode): { label: string; formatSelector: string; kind: "video" | "audio" } {
   if (mode === "480")
     return {
       label: "480p",
@@ -28,18 +29,51 @@ export function Playlist() {
   const url = usePlaylistUrlStore((s) => s.url);
   const setUrl = usePlaylistUrlStore((s) => s.setUrl);
   const playlistFullThumbnails = useSettingsStore((s) => s.playlistFullThumbnails);
+  const animationFull = useSettingsStore((s) => s.animationLevel === "full");
+  const stagger = useTabContentStagger();
   const setFetchOverlay = useFetchOverlayStore((s) => s.setFetchOverlay);
+
+  const data = useSessionFetchStore((s) => s.playlistData);
+  const playlistThumbRefinedIds = useSessionFetchStore((s) => s.playlistThumbRefinedIds);
+  const playlistThumbRefineDone = useSessionFetchStore((s) => s.playlistThumbRefineDone);
+  const mode = useSessionFetchStore((s) => s.playlistMode);
+  const playlistSelectedIds = useSessionFetchStore((s) => s.playlistSelectedIds);
+
+  const setPlaylistData = useSessionFetchStore((s) => s.setPlaylistData);
+  const setPlaylistMeta = useSessionFetchStore((s) => s.setPlaylistMeta);
+  const setPlaylistMode = useSessionFetchStore((s) => s.setPlaylistMode);
+  const setPlaylistSelectedIds = useSessionFetchStore((s) => s.setPlaylistSelectedIds);
+  const patchPlaylistEntryThumb = useSessionFetchStore((s) => s.patchPlaylistEntryThumb);
+  const addPlaylistThumbRefined = useSessionFetchStore((s) => s.addPlaylistThumbRefined);
+  const setPlaylistThumbRefineDone = useSessionFetchStore((s) => s.setPlaylistThumbRefineDone);
+  const resetPlaylistThumbRefine = useSessionFetchStore((s) => s.resetPlaylistThumbRefine);
+  const clearPlaylistSession = useSessionFetchStore((s) => s.clearPlaylistSession);
+
   const [limit, setLimit] = useState(50);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [data, setData] = useState<PlaylistInfoPayload | null>(null);
-  const [mode, setMode] = useState<PlMode>("bestv");
   const [outDir, setOutDir] = useState("");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [fetchKey, setFetchKey] = useState(0);
-  const [refineSnapshot, setRefineSnapshot] = useState<PlaylistEntry[] | null>(null);
-  const dataRef = useRef(data);
-  dataRef.current = data;
+  const [refineSnapshot, setRefineSnapshot] = useState<PlaylistInfoPayload["entries"] | null>(null);
+  const [quickHint, setQuickHint] = useState<string | null>(null);
+  const [thumbBulkBusy, setThumbBulkBusy] = useState(false);
+
+  const flashHint = useCallback((msg: string) => {
+    setQuickHint(msg);
+    window.setTimeout(() => setQuickHint(null), 1400);
+  }, []);
+
+  const copyText = useCallback(
+    async (text: string, okMsg: string) => {
+      try {
+        await navigator.clipboard.writeText(text);
+        flashHint(okMsg);
+      } catch {
+        flashHint("Copy failed");
+      }
+    },
+    [flashHint],
+  );
 
   useEffect(() => {
     void (async () => {
@@ -52,47 +86,82 @@ export function Playlist() {
   }, []);
 
   useEffect(() => {
-    const d = dataRef.current;
-    if (!d) return;
-    setSelected(new Set(d.entries.map((e) => e.id)));
-  }, [fetchKey]);
+    const st = useSessionFetchStore.getState();
+    if (st.playlistData && st.playlistFetchedUrl === url.trim()) {
+      setLimit(st.playlistFetchedLimit);
+    }
+  }, [url]);
+
+  useEffect(() => {
+    const t = url.trim();
+    if (!t) {
+      clearPlaylistSession();
+      setRefineSnapshot(null);
+      return;
+    }
+    const st = useSessionFetchStore.getState();
+    if (st.playlistFetchedUrl && st.playlistData && t !== st.playlistFetchedUrl.trim()) {
+      clearPlaylistSession();
+      setRefineSnapshot(null);
+    }
+  }, [url, clearPlaylistSession]);
+
+  useEffect(() => {
+    if (!data?.entries.length || !playlistFullThumbnails) return;
+    if (playlistThumbRefineDone) return;
+    setRefineSnapshot((prev) => prev ?? data.entries);
+  }, [data, playlistFullThumbnails, playlistThumbRefineDone]);
 
   useEffect(() => {
     if (!playlistFullThumbnails || !refineSnapshot?.length) return;
     let cancelled = false;
     void (async () => {
+      const refined = new Set(useSessionFetchStore.getState().playlistThumbRefinedIds);
       for (const e of refineSnapshot) {
         if (cancelled) return;
-        const t = await window.omnidl.fetchVideoThumb(e.url);
-        if (t && !cancelled) {
-          setData((prev) => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              entries: prev.entries.map((x) => (x.id === e.id ? { ...x, thumbnail: t } : x)),
-            };
-          });
+        if (refined.has(e.id)) continue;
+        const thumb = await window.omnidl.fetchVideoThumb(e.url);
+        if (thumb && !cancelled) {
+          patchPlaylistEntryThumb(e.id, thumb);
+          addPlaylistThumbRefined(e.id);
+          refined.add(e.id);
         }
         await new Promise((r) => setTimeout(r, 120));
+      }
+      if (!cancelled) {
+        setPlaylistThumbRefineDone(true);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [refineSnapshot, playlistFullThumbnails]);
+  }, [
+    refineSnapshot,
+    playlistFullThumbnails,
+    patchPlaylistEntryThumb,
+    addPlaylistThumbRefined,
+    setPlaylistThumbRefineDone,
+  ]);
 
   const load = async () => {
     setErr(null);
     setLoading(true);
-    setData(null);
+    clearPlaylistSession();
     setRefineSnapshot(null);
     setFetchOverlay(true, "Loading playlist…");
     try {
       const lim = Math.min(100, Math.max(1, limit));
       await window.omnidl.settingsSet("playlistLimit", String(lim));
       const pl = await window.omnidl.fetchPlaylist(url.trim(), lim);
-      setData(pl);
-      setRefineSnapshot(pl.entries);
+      setPlaylistData(pl);
+      setPlaylistMeta({ playlistFetchedUrl: url.trim(), playlistFetchedLimit: lim });
+      setPlaylistSelectedIds(pl.entries.map((e) => e.id));
+      if (playlistFullThumbnails) {
+        resetPlaylistThumbRefine();
+        setRefineSnapshot(pl.entries);
+      } else {
+        setPlaylistThumbRefineDone(true);
+      }
       setFetchKey((k) => k + 1);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -112,28 +181,85 @@ export function Playlist() {
 
   const allSelected = useMemo(() => {
     if (!data?.entries.length) return false;
-    return data.entries.every((e) => selected.has(e.id));
-  }, [data, selected]);
+    return data.entries.every((e) => playlistSelectedIds.includes(e.id));
+  }, [data, playlistSelectedIds]);
 
   const toggleSelectAll = () => {
     if (!data) return;
-    if (allSelected) setSelected(new Set());
-    else setSelected(new Set(data.entries.map((e) => e.id)));
+    if (allSelected) setPlaylistSelectedIds([]);
+    else setPlaylistSelectedIds(data.entries.map((e) => e.id));
   };
 
   const toggleOne = (id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    const next = new Set(playlistSelectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setPlaylistSelectedIds([...next]);
   };
+
+  const playlistDurationStats = useMemo(() => {
+    if (!data?.entries.length) {
+      return { totalSec: 0, knownCount: 0, unknownCount: 0 };
+    }
+    let totalSec = 0;
+    let knownCount = 0;
+    for (const e of data.entries) {
+      if (e.duration != null && e.duration > 0) {
+        totalSec += e.duration;
+        knownCount++;
+      }
+    }
+    return {
+      totalSec,
+      knownCount,
+      unknownCount: data.entries.length - knownCount,
+    };
+  }, [data]);
+
+  const thumbProgress =
+    data && playlistFullThumbnails && !playlistThumbRefineDone
+      ? Math.round((playlistThumbRefinedIds.length / Math.max(1, data.entries.length)) * 100)
+      : 0;
+
+  const saveEntryThumb = useCallback(async (e: PlaylistEntry) => {
+    if (!e.thumbnail) return;
+    const r = await window.omnidl.thumbnailSaveAs({
+      url: e.thumbnail,
+      defaultName: `${e.title.slice(0, 120)}.jpg`,
+    });
+    if (r.ok) flashHint("Cover saved");
+    else flashHint(r.path ? "Save failed" : "Cancelled");
+  }, [flashHint]);
+
+  const downloadAllThumbs = useCallback(async () => {
+    if (!data) return;
+    const items = data.entries
+      .filter((e) => e.thumbnail)
+      .map((e, idx) => ({
+        url: e.thumbnail as string,
+        fileName: `${String(idx + 1).padStart(3, "0")}_${e.title.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_").slice(0, 100)}.jpg`,
+      }));
+    if (!items.length) {
+      flashHint("No thumbnails");
+      return;
+    }
+    setThumbBulkBusy(true);
+    try {
+      const r = await window.omnidl.thumbnailsSaveBulkToFolder(items);
+      if (!r.ok) {
+        flashHint("Cancelled");
+        return;
+      }
+      flashHint(`Saved ${r.count} file(s)`);
+    } finally {
+      setThumbBulkBusy(false);
+    }
+  }, [data, flashHint]);
 
   const enqueueBatch = async () => {
     if (!data?.entries.length || !outDir) return;
     const { label, formatSelector, kind } = selectorFor(mode);
-    const items = data.entries.filter((e) => selected.has(e.id));
+    const items = data.entries.filter((e) => playlistSelectedIds.includes(e.id));
     for (const e of items) {
       await window.omnidl.queueAddToQueue({
         url: e.url,
@@ -149,8 +275,14 @@ export function Playlist() {
   };
 
   return (
-    <div className="space-y-5">
-      <BrutalPanel className="p-5">
+    <motion.div
+      className="space-y-5"
+      variants={stagger.root}
+      initial="hidden"
+      animate="show"
+    >
+      <motion.div variants={stagger.section}>
+        <BrutalPanel className="p-5">
         <div className="flex items-center gap-2 text-sm font-black uppercase">
           <ListVideo className="h-5 w-5" strokeWidth={2} aria-hidden />
           Playlist URL
@@ -183,24 +315,171 @@ export function Playlist() {
           </motion.button>
         </div>
         {err && <p className="mt-2 text-sm font-bold text-red-700">{err}</p>}
-      </BrutalPanel>
+        </BrutalPanel>
+      </motion.div>
 
       <AnimatePresence mode="wait">
         {data ? (
           <motion.div
-            key={data.title}
-            initial={{ opacity: 0, y: 12 }}
+            key={data.title + String(fetchKey)}
+            initial={{ opacity: 0, y: animationFull ? 12 : 4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: animationFull ? 0.28 : 0.1, ease: [0.22, 1, 0.36, 1] }}
           >
             <BrutalPanel className="p-5">
+              <motion.div
+                variants={stagger.root}
+                initial="hidden"
+                animate="show"
+                className="flex flex-col"
+              >
+              <motion.div variants={stagger.section}>
               <div className="text-lg font-black">{data.title}</div>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
+              <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs font-bold text-neutral-800">
+                <dt className="text-neutral-500">Entries</dt>
+                <dd className="text-left">{data.entries.length}</dd>
+                <dt className="text-neutral-500">Total duration</dt>
+                <dd className="text-left">
+                  {playlistDurationStats.knownCount > 0
+                    ? formatDuration(playlistDurationStats.totalSec)
+                    : "—"}
+                  {playlistDurationStats.unknownCount > 0 ? (
+                    <span className="ml-1 font-semibold text-neutral-600">
+                      ({playlistDurationStats.unknownCount} without length data)
+                    </span>
+                  ) : null}
+                </dd>
+              </dl>
+              </motion.div>
+
+              {playlistFullThumbnails && data.entries.length > 0 ? (
+                <motion.div variants={stagger.section} className="mt-4 border-4 border-[#111] bg-[#fffef8] p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-black uppercase">
+                    <span>HD thumbnails</span>
+                    <span className="font-mono text-[11px] font-bold text-neutral-600">
+                      {playlistThumbRefinedIds.length} / {data.entries.length}
+                      {playlistThumbRefineDone ? " · done" : ""}
+                    </span>
+                  </div>
+                  {!playlistThumbRefineDone ? (
+                    <div className="mt-2 h-3 w-full overflow-hidden border-4 border-[#111] bg-neutral-200">
+                      <motion.div
+                        className="h-full bg-[#4ecdc4]"
+                        initial={false}
+                        animate={{ width: `${thumbProgress}%` }}
+                        transition={{ type: "spring", stiffness: 200, damping: 28 }}
+                      />
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-[11px] font-bold text-neutral-600">
+                      All thumbnails refreshed for this session.
+                    </p>
+                  )}
+                </motion.div>
+              ) : null}
+
+              {data.entries.some((e) => e.thumbnail) ? (
+                <motion.div variants={stagger.section} className="mt-4">
+                  <motion.button
+                    type="button"
+                    disabled={thumbBulkBusy}
+                    whileHover={thumbBulkBusy ? undefined : { y: -3 }}
+                    whileTap={thumbBulkBusy ? undefined : { scale: 0.99 }}
+                    onClick={() => void downloadAllThumbs()}
+                    className="w-full border-4 border-[#111] bg-[#a29bfe] px-4 py-4 text-center font-black uppercase tracking-wide shadow-[6px_6px_0_0_#111] disabled:opacity-50"
+                  >
+                    {thumbBulkBusy ? "Saving…" : "Download all thumbnails"}
+                  </motion.button>
+                  <p className="mt-2 text-[11px] font-semibold text-neutral-600">
+                    Pick a folder once; files are named 001_title.jpg, 002_title.jpg, …
+                  </p>
+                </motion.div>
+              ) : null}
+
+              <motion.div variants={stagger.section} className="mt-5 grid grid-cols-2 gap-3">
+                <motion.button
+                  type="button"
+                  whileHover={{ y: -5, rotate: -0.8, transition: { duration: 0.18 } }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => void copyText(url.trim(), "Link copied")}
+                  className="border-4 border-[#111] bg-[#4ecdc4] px-3 py-3 text-left shadow-[4px_4px_0_0_#111] outline-none ring-0 transition-shadow hover:shadow-[7px_7px_0_0_#111] focus-visible:ring-4 focus-visible:ring-[#111]"
+                >
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#111]/80">
+                    Clipboard
+                  </div>
+                  <div className="mt-1 font-black leading-tight text-[#111]">Copy playlist URL</div>
+                </motion.button>
+                <motion.button
+                  type="button"
+                  whileHover={{ y: -5, rotate: 0.8, transition: { duration: 0.18 } }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => void copyText(data.title, "Title copied")}
+                  className="border-4 border-[#111] bg-[#ffe66d] px-3 py-3 text-left shadow-[4px_4px_0_0_#111] outline-none ring-0 transition-shadow hover:shadow-[7px_7px_0_0_#111] focus-visible:ring-4 focus-visible:ring-[#111]"
+                >
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#111]/80">
+                    Clipboard
+                  </div>
+                  <div className="mt-1 line-clamp-2 font-black leading-tight text-[#111]">Copy title</div>
+                </motion.button>
+                <motion.button
+                  type="button"
+                  whileHover={{ y: -5, x: -2, transition: { duration: 0.18 } }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => {
+                    const u = url.trim();
+                    if (u) window.open(u, "_blank", "noopener,noreferrer");
+                  }}
+                  className="border-4 border-[#111] bg-[#fab1a0] px-3 py-3 text-left shadow-[4px_4px_0_0_#111] outline-none ring-0 transition-shadow hover:shadow-[7px_7px_0_0_#111] focus-visible:ring-4 focus-visible:ring-[#111]"
+                >
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#111]/80">
+                    Browser
+                  </div>
+                  <div className="mt-1 font-black leading-tight text-[#111]">Open playlist page</div>
+                </motion.button>
+                <motion.button
+                  type="button"
+                  whileHover={{ y: -5, scale: 1.02, transition: { duration: 0.18 } }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => {
+                    const lines = [
+                      `Playlist: ${data.title}`,
+                      `URL: ${url.trim()}`,
+                      `Entries: ${data.entries.length}`,
+                      playlistDurationStats.knownCount > 0
+                        ? `Total duration (sum of known): ${formatDuration(playlistDurationStats.totalSec)}`
+                        : "Total duration: — (no per-video length in fetch)",
+                      playlistDurationStats.unknownCount > 0
+                        ? `Without duration data: ${playlistDurationStats.unknownCount} item(s)`
+                        : "",
+                    ].filter(Boolean);
+                    void copyText(lines.join("\n"), "Summary copied");
+                  }}
+                  className="border-4 border-[#111] bg-[#a29bfe] px-3 py-3 text-left shadow-[4px_4px_0_0_#111] outline-none ring-0 transition-shadow hover:shadow-[7px_7px_0_0_#111] focus-visible:ring-4 focus-visible:ring-[#111]"
+                >
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#111]/80">
+                    Export
+                  </div>
+                  <div className="mt-1 font-black leading-tight text-[#111]">Copy text summary</div>
+                </motion.button>
+              </motion.div>
+              <AnimatePresence>
+                {quickHint ? (
+                  <motion.p
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    className="mt-3 text-center text-[11px] font-black uppercase tracking-wider text-[#111]"
+                  >
+                    {quickHint}
+                  </motion.p>
+                ) : null}
+              </AnimatePresence>
+              <motion.div variants={stagger.section} className="mt-6 flex flex-wrap items-center gap-2">
                 <label className="text-xs font-black uppercase">Quality</label>
                 <select
                   value={mode}
-                  onChange={(e) => setMode(e.target.value as PlMode)}
+                  onChange={(e) => setPlaylistMode(e.target.value as PlaylistMode)}
                   className="border-4 border-[#111] bg-white px-2 py-1 font-bold"
                 >
                   <option value="480">480p</option>
@@ -217,10 +496,10 @@ export function Playlist() {
                   {allSelected ? "Deselect all" : "Select all"}
                 </motion.button>
                 <span className="text-xs font-bold text-neutral-600">
-                  {selected.size} / {data.entries.length} selected
+                  {playlistSelectedIds.length} / {data.entries.length} selected
                 </span>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
+              </motion.div>
+              <motion.div variants={stagger.section} className="mt-3 flex flex-wrap gap-2">
                 <div className="min-w-0 flex-1 truncate border-4 border-[#111] bg-white px-2 py-2 text-xs font-semibold">
                   {outDir}
                 </div>
@@ -236,55 +515,84 @@ export function Playlist() {
                 </motion.button>
                 <motion.button
                   type="button"
-                  disabled={!outDir || selected.size === 0}
+                  disabled={!outDir || playlistSelectedIds.length === 0}
                   onClick={() => void enqueueBatch()}
-                  whileHover={outDir && selected.size > 0 ? { y: -2 } : undefined}
-                  whileTap={outDir && selected.size > 0 ? { scale: 0.98 } : undefined}
+                  whileHover={outDir && playlistSelectedIds.length > 0 ? { y: -2 } : undefined}
+                  whileTap={outDir && playlistSelectedIds.length > 0 ? { scale: 0.98 } : undefined}
                   className={`inline-flex items-center gap-2 border-4 border-[#111] bg-[#ff6b6b] px-4 py-2 font-black uppercase text-white shadow-[4px_4px_0_0_#111] disabled:opacity-50 ${btnHover}`}
                 >
                   <Plus className="h-5 w-5" strokeWidth={2} aria-hidden />
                   Enqueue selected
                 </motion.button>
-              </div>
-              <div className="mt-4 max-h-[70vh] overflow-auto pr-1">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {data.entries.map((e, i) => (
-                    <motion.div
-                      key={e.id + e.index}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: Math.min(i * 0.015, 0.35), duration: 0.2 }}
-                      className={`flex flex-col border-4 border-[#111] bg-white ${
-                        selected.has(e.id) ? "ring-2 ring-[#111] ring-offset-2" : ""
-                      }`}
-                    >
-                      <label className="relative flex cursor-pointer flex-col">
-                        <span className="absolute left-2 top-2 z-10">
-                          <input
-                            type="checkbox"
-                            checked={selected.has(e.id)}
-                            onChange={() => toggleOne(e.id)}
-                            className="h-4 w-4 border-4 border-[#111]"
-                          />
-                        </span>
-                        <div className="aspect-video w-full overflow-hidden border-b-4 border-[#111] bg-neutral-200">
-                          {e.thumbnail ? (
-                            <img src={e.thumbnail} alt="" className="h-full w-full object-cover" />
+              </motion.div>
+              <motion.div variants={stagger.section} className="mt-4 max-h-[70vh] overflow-auto pr-1">
+                <motion.div
+                  variants={stagger.grid}
+                  initial="hidden"
+                  animate="show"
+                  className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                >
+                  {data.entries.map((e) => {
+                    const thumbOk =
+                      playlistFullThumbnails &&
+                      (playlistThumbRefineDone || playlistThumbRefinedIds.includes(e.id));
+                    return (
+                      <motion.div
+                        key={e.id + e.index}
+                        variants={stagger.card}
+                        className={`flex flex-col border-4 border-[#111] bg-white ${
+                          playlistSelectedIds.includes(e.id) ? "ring-2 ring-[#111] ring-offset-2" : ""
+                        }`}
+                      >
+                        <label className="relative flex cursor-pointer flex-col">
+                          <span className="absolute left-2 top-2 z-10">
+                            <input
+                              type="checkbox"
+                              checked={playlistSelectedIds.includes(e.id)}
+                              onChange={() => toggleOne(e.id)}
+                              className="h-4 w-4 border-4 border-[#111]"
+                            />
+                          </span>
+                          {playlistFullThumbnails ? (
+                            <span className="absolute right-2 top-2 z-10 border-4 border-[#111] bg-[#fffef8] px-1.5 py-0.5 text-[10px] font-black uppercase text-[#111]">
+                              {thumbOk ? "OK" : "…"}
+                            </span>
                           ) : null}
-                        </div>
-                        <div className="p-2">
-                          <div className="text-[10px] font-black text-neutral-500">#{e.index}</div>
-                          <div className="mt-1 line-clamp-3 text-xs font-bold leading-snug">{e.title}</div>
-                        </div>
-                      </label>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
+                          <div className="aspect-video w-full overflow-hidden border-b-4 border-[#111] bg-neutral-200">
+                            {e.thumbnail ? (
+                              <img src={e.thumbnail} alt="" className="h-full w-full object-cover" />
+                            ) : null}
+                          </div>
+                          <div className="p-2">
+                            <div className="text-[10px] font-black text-neutral-500">#{e.index}</div>
+                            <div className="mt-1 line-clamp-3 text-xs font-bold leading-snug">{e.title}</div>
+                            {e.thumbnail ? (
+                              <motion.button
+                                type="button"
+                                className="mt-2 w-full border-4 border-[#111] bg-[#fab1a0] px-2 py-1.5 text-[10px] font-black uppercase shadow-[3px_3px_0_0_#111]"
+                                whileHover={{ y: -1 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={(ev) => {
+                                  ev.preventDefault();
+                                  ev.stopPropagation();
+                                  void saveEntryThumb(e);
+                                }}
+                              >
+                                Download cover
+                              </motion.button>
+                            ) : null}
+                          </div>
+                        </label>
+                      </motion.div>
+                    );
+                  })}
+                </motion.div>
+              </motion.div>
+              </motion.div>
             </BrutalPanel>
           </motion.div>
         ) : null}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }

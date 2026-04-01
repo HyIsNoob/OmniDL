@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import type { TabId } from "@shared/ipc";
+import { TAB_COVER_MS, TAB_EXIT_MS } from "../lib/tabTransition";
+import { useSettingsStore } from "./settingsUi";
 
 const TAB_ORDER: TabId[] = [
   "home",
@@ -30,6 +32,7 @@ type AppState = {
   overlayOn: boolean;
   sweep: TabSweep;
   transitionLabel: string;
+  transitionLocked: boolean;
   setTab: (t: TabId) => void;
 };
 
@@ -38,8 +41,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   overlayOn: false,
   sweep: "down",
   transitionLabel: "",
+  transitionLocked: false,
   setTab: (t) => {
     if (t === get().tab) return;
+    const reduced = useSettingsStore.getState().animationLevel === "reduced";
+    if (reduced) {
+      set({ tab: t, overlayOn: false, transitionLocked: false });
+      return;
+    }
+    if (get().transitionLocked) return;
     const prev = tabIndex(get().tab);
     const next = tabIndex(t);
     const sweep: TabSweep = next < prev ? "up" : "down";
@@ -47,10 +57,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       overlayOn: true,
       sweep,
       transitionLabel: TAB_TRANSITION_LABEL[t],
+      transitionLocked: true,
     });
     window.setTimeout(() => {
-      set({ tab: t });
-      window.setTimeout(() => set({ overlayOn: false }), 380);
-    }, 90);
+      set({ tab: t, overlayOn: false });
+      window.setTimeout(() => {
+        set({ transitionLocked: false });
+      }, TAB_EXIT_MS);
+    }, TAB_COVER_MS);
   },
 }));

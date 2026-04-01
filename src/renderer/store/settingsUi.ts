@@ -1,16 +1,20 @@
 import { create } from "zustand";
 
+export type AnimationLevel = "full" | "reduced";
+
 type S = {
   clipboardWatch: boolean;
   autoFetch: boolean;
   notificationsPush: boolean;
   playlistFullThumbnails: boolean;
+  animationLevel: AnimationLevel;
   hydrated: boolean;
   hydrate: () => Promise<void>;
   setClipboardWatch: (v: boolean) => Promise<void>;
   setAutoFetch: (v: boolean) => Promise<void>;
   setNotificationsPush: (v: boolean) => Promise<void>;
   setPlaylistFullThumbnails: (v: boolean) => Promise<void>;
+  setAnimationLevel: (v: AnimationLevel) => Promise<void>;
 };
 
 export const useSettingsStore = create<S>((set) => ({
@@ -18,6 +22,7 @@ export const useSettingsStore = create<S>((set) => ({
   autoFetch: false,
   notificationsPush: true,
   playlistFullThumbnails: false,
+  animationLevel: "full",
   hydrated: false,
   hydrate: async () => {
     try {
@@ -25,11 +30,14 @@ export const useSettingsStore = create<S>((set) => ({
       const af = (await window.omnidl.settingsGet("autoFetch")) === "1";
       const np = (await window.omnidl.settingsGet("notificationsPush")) !== "0";
       const pft = (await window.omnidl.settingsGet("playlistFullThumbnails")) === "1";
+      const al = await window.omnidl.settingsGet("animationLevel");
+      const animationLevel: AnimationLevel = al === "reduced" ? "reduced" : "full";
       set({
         clipboardWatch: cw,
         autoFetch: af,
         notificationsPush: np,
         playlistFullThumbnails: pft,
+        animationLevel,
         hydrated: true,
       });
     } catch {
@@ -51,5 +59,9 @@ export const useSettingsStore = create<S>((set) => ({
   setPlaylistFullThumbnails: async (v) => {
     await window.omnidl.settingsSet("playlistFullThumbnails", v ? "1" : "0");
     set({ playlistFullThumbnails: v });
+  },
+  setAnimationLevel: async (v) => {
+    await window.omnidl.settingsSet("animationLevel", v === "reduced" ? "reduced" : "full");
+    set({ animationLevel: v });
   },
 }));

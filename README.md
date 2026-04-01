@@ -1,13 +1,13 @@
 <div align="center">
-	<img src="./icon.png" alt="OmniDL" width="120" />
+ <img src="./icon.png" alt="OmniDL" width="120" />
 <h1>OmniDL</h1>
 <p>Desktop <strong>YouTube</strong> &amp; <strong>TikTok</strong> downloader for Windows — neo-brutalist UI, <strong>yt-dlp</strong> powered, local-first queue and history. Built with Electron, React, and TypeScript.</p>
 
 <p>
-	<a href="https://github.com/HyIsNoob/OmniDL"><img alt="Repo" src="https://img.shields.io/badge/GitHub-OmniDL-000?logo=github" /></a>
-	<a href="https://github.com/HyIsNoob/OmniDL/releases"><img alt="Version" src="https://img.shields.io/github/v/release/HyIsNoob/OmniDL?label=version&color=blue" /></a>
-	<img alt="License" src="https://img.shields.io/badge/license-MIT-green" />
-	<img alt="Electron" src="https://img.shields.io/badge/Electron-33.x-47848F?logo=electron" />
+ <a href="https://github.com/HyIsNoob/OmniDL"><img alt="Repo" src="https://img.shields.io/badge/GitHub-OmniDL-000?logo=github" /></a>
+ <a href="https://github.com/HyIsNoob/OmniDL/releases"><img alt="Version" src="https://img.shields.io/github/v/release/HyIsNoob/OmniDL?label=version&color=blue" /></a>
+ <img alt="License" src="https://img.shields.io/badge/license-MIT-green" />
+ <img alt="Electron" src="https://img.shields.io/badge/Electron-33.x-47848F?logo=electron" />
 </p>
 </div>
 
@@ -25,13 +25,11 @@ Paste a **YouTube** or **TikTok** video URL, run **Fetch** to load title, durati
 
 <img width="1919" height="984" alt="image" src="https://github.com/user-attachments/assets/e5da5763-7624-4813-aaaf-1c3685680305" />
 
-
 ### Queue
 
 Runs downloads **one at a time** with progress, speed, and ETA. **Pause**, **resume**, or **cancel** the active job; queued items wait in order. Uses **ffmpeg-static** for merge when needed.
 
 <img width="1907" height="967" alt="image" src="https://github.com/user-attachments/assets/f4e70853-12a4-4f73-846c-ae96d241a449" />
-
 
 ### Playlist (YouTube)
 
@@ -39,20 +37,17 @@ Enter a **playlist** URL, set a **limit** (max entries), and **Get playlist** to
 
 <img width="1919" height="977" alt="image" src="https://github.com/user-attachments/assets/55a92519-fb0a-474c-9ca6-9e9b782170dd" />
 
-
 ### History
 
 Browse **past downloads**: titles, paths, and quick actions such as opening the output folder. Data is stored locally in the app user data directory.
 
 <img width="1919" height="991" alt="image" src="https://github.com/user-attachments/assets/e0410e7a-d146-4482-8d4d-74ae113daf7f" />
 
-
 ### Options
 
 Configure **download directory**, **clipboard detection** (YouTube / TikTok video links; playlist-only URLs are ignored for Home paste), **auto-fetch**, **yt-dlp** version check and update, and **application updates** from GitHub.
 
 <img width="1919" height="978" alt="image" src="https://github.com/user-attachments/assets/08011c98-c2a4-4d92-b1dd-d430f45ee35e" />
-
 
 ## Requirements
 

@@ -1,6 +1,20 @@
 import { AnimatePresence, motion } from "framer-motion";
 import type { TabSweep } from "../store/app";
 
+const COLS = 10;
+const COLORS = [
+  "#4ecdc4",
+  "#ff6b6b",
+  "#ffe66d",
+  "#a29bfe",
+  "#fab1a0",
+  "#111111",
+  "#fffef8",
+  "#fab1a0",
+  "#4ecdc4",
+  "#ff6b6b",
+];
+
 export function TransitionOverlay({
   active,
   sweep,
@@ -10,44 +24,43 @@ export function TransitionOverlay({
   sweep: TabSweep;
   label: string;
 }) {
-  const enterFromTop = sweep === "down";
+  const fromBottom = sweep === "down";
   return (
-    <AnimatePresence>
-      {active && (
+    <AnimatePresence mode="wait">
+      {active ? (
         <motion.div
-          className="pointer-events-none fixed inset-0 z-[100] overflow-hidden"
+          key={label}
+          className="pointer-events-none fixed inset-0 z-[100] flex overflow-hidden"
           initial={false}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 1 }}
         >
-          <motion.div
-            key={`${sweep}-${label}`}
-            className="absolute inset-0 flex items-center justify-center bg-[#141414] opacity-100"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at center, rgba(255,255,255,0.12) 1px, transparent 1.5px)",
-              backgroundSize: "20px 20px",
-            }}
-            initial={{ y: enterFromTop ? "-100vh" : "100vh" }}
-            animate={{ y: 0 }}
-            exit={{ y: enterFromTop ? "100vh" : "-100vh" }}
-            transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
-          >
+          {Array.from({ length: COLS }, (_, i) => (
             <motion.div
-              className="font-display px-6 text-center text-5xl font-normal uppercase leading-none tracking-brutal text-[#faf8f3] sm:text-6xl md:text-7xl"
-              style={{ textShadow: "4px 4px 0 #000" }}
-              initial={{ opacity: 0, y: enterFromTop ? -20 : 20 }}
+              key={i}
+              className="h-full flex-1 border-l-4 border-[#111] first:border-l-0"
+              style={{ backgroundColor: COLORS[i % COLORS.length] }}
+              initial={{ y: fromBottom ? "100%" : "-100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: fromBottom ? "-100%" : "100%" }}
+              transition={{
+                duration: 0.34,
+                delay: i * 0.024,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+            />
+          ))}
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-4">
+            <motion.div
+              className="max-w-[min(96vw,56rem)] border-4 border-[#111] bg-[#fffef8] px-5 py-4 text-center font-display text-3xl font-normal uppercase leading-none tracking-brutal text-[#111] shadow-[8px_8px_0_0_#111] sm:text-4xl md:text-5xl"
+              initial={{ opacity: 0, y: fromBottom ? 12 : -12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.08, duration: 0.2 }}
+              exit={{ opacity: 0 }}
+              transition={{ delay: 0.06, duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
             >
               {label || "—"}
             </motion.div>
-            <div className="pointer-events-none absolute bottom-8 left-0 right-0 text-center font-sans text-[10px] font-bold uppercase tracking-[0.35em] text-neutral-500">
-              OmniDL
-            </div>
-          </motion.div>
+          </div>
         </motion.div>
-      )}
+      ) : null}
     </AnimatePresence>
   );
 }
