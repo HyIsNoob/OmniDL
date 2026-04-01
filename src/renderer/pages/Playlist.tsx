@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FolderOpen, ListVideo, Loader2, Plus } from "lucide-react";
 import type { PlaylistEntry, PlaylistInfoPayload } from "@shared/ipc";
+import { sanitizeFileNameSegment } from "@shared/filenameSanitize";
 import { formatDuration } from "../lib/format";
 import { useTabContentStagger } from "../lib/tabContentMotion";
 import { BrutalPanel } from "../components/BrutalPanel";
@@ -237,7 +238,7 @@ export function Playlist() {
       .filter((e) => e.thumbnail)
       .map((e, idx) => ({
         url: e.thumbnail as string,
-        fileName: `${String(idx + 1).padStart(3, "0")}_${e.title.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_").slice(0, 100)}.jpg`,
+        fileName: `${String(idx + 1).padStart(3, "0")}_${sanitizeFileNameSegment(e.title, 100)}.jpg`,
       }));
     if (!items.length) {
       flashHint("No thumbnails");

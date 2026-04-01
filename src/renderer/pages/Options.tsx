@@ -27,6 +27,7 @@ export function Options() {
   const [appV, setAppV] = useState("");
   const [ytV, setYtV] = useState<string | null>(null);
   const [remote, setRemote] = useState<string | null>(null);
+  const stagger = useTabContentStagger();
 
   useEffect(() => {
     void (async () => {

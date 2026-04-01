@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-04-01
+
+### Fixed
+
+- **ESLint CI**: avoid `no-control-regex` in filename sanitization (shared `sanitizeFileNameSegment`); **Options** page calls `useTabContentStagger()` so motion variants are defined.
+
 ## [1.5.0] - 2026-04-01
 
 ### Added

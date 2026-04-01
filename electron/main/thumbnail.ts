@@ -1,9 +1,9 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { sanitizeFileNameSegment } from "../../shared/filenameSanitize";
 
 export function sanitizeThumbFileName(name: string): string {
-  const base = name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_").trim() || "thumb";
-  return base.slice(0, 180);
+  return sanitizeFileNameSegment(name, 180);
 }
 
 export async function downloadThumbnail(url: string, destPath: string): Promise<boolean> {
