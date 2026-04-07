@@ -90,8 +90,7 @@ export function Instruction() {
             How to use OmniDL
           </h1>
           <p className="mt-4 max-w-2xl text-sm font-bold leading-relaxed text-neutral-300">
-            Paste a link, fetch metadata, pick a format, choose a folder, then download or queue. Use the
-            full-screen loader while Fetch runs so metadata finishes before you switch tasks.
+            Paste a link, fetch, pick format and folder, then download or queue.
           </p>
         </div>
       </motion.div>
@@ -100,19 +99,16 @@ export function Instruction() {
         <h2 className="font-display text-sm font-normal uppercase tracking-brutal text-[#111]">Quick start</h2>
         <motion.div className="grid gap-4 sm:grid-cols-2" variants={staggerGrid} initial="hidden" animate="show">
           <Zone itemVariants={item} bandVariants={band} step="01" title="Paste or detect" accent="bg-[#4ecdc4]">
-            Put a video URL in the Home field. With clipboard detection (Options), supported links can appear
-            when you focus Home.
+            URL on Home. Optional clipboard detect (Options).
           </Zone>
           <Zone itemVariants={item} bandVariants={band} step="02" title="Fetch" accent="bg-[#ffe66d]">
-            Press Fetch for a full-screen loader until metadata is ready. With auto-fetch enabled, a slim top
-            bar shows progress instead so you can keep using the app.
+            Fetch or auto-fetch (Options) loads metadata.
           </Zone>
           <Zone itemVariants={item} bandVariants={band} step="03" title="Quality & folder" accent="bg-[#fab1a0]">
-            Choose video or audio, then a format. Pick the save folder with Folder (stored for next time).
+            Video or audio, format, and save folder.
           </Zone>
           <Zone itemVariants={item} bandVariants={band} step="04" title="Download or queue" accent="bg-[#a29bfe]">
-            Download now runs next in the queue. Add to queue appends without starting immediately if something
-            else is active.
+            Download now = next in queue. Add to queue = end of queue.
           </Zone>
         </motion.div>
       </motion.section>
@@ -128,8 +124,7 @@ export function Instruction() {
                 Download now
               </p>
               <p className="mt-2 text-sm font-bold text-neutral-800">
-                Inserts the job right after whatever is running (or starts immediately if the queue is idle).
-                Best when you want this file next.
+                Next after the current job, or starts if idle.
               </p>
             </div>
             <div className="border-4 border-[#111] bg-[#ffe66d]/25 p-4">
@@ -137,8 +132,7 @@ export function Instruction() {
                 Add to queue
               </p>
               <p className="mt-2 text-sm font-bold text-neutral-800">
-                Appends to the end. The queue runs one download at a time in order—good for batching from Home or
-                Playlist.
+                Appends at the end. Parallel count is set in Options.
               </p>
             </div>
           </div>
@@ -157,10 +151,9 @@ export function Instruction() {
               Playlist tab
             </h2>
             <ul className="mt-3 list-disc space-y-2 pl-5 text-sm font-bold text-neutral-800">
-              <li>Paste a YouTube playlist URL and set how many entries to scan (max 100).</li>
-              <li>Get playlist loads titles; optional HD thumbnails refine in the background (Options).</li>
-              <li>Select videos, choose quality, pick folder, then enqueue selected—same queue rules as Home.</li>
-              <li>Fetching the playlist shows the same full-screen loader until the list is ready.</li>
+              <li>Playlist URL and scan limit (max 100).</li>
+              <li>Get playlist, optional HD thumbnails (Options).</li>
+              <li>Select items, quality, folder, enqueue.</li>
             </ul>
           </BrutalPanel>
         </motion.div>
@@ -170,9 +163,8 @@ export function Instruction() {
               Queue · History
             </h2>
             <ul className="mt-3 list-disc space-y-2 pl-5 text-sm font-bold text-neutral-800">
-              <li>Queue: pause, cancel, or remove finished rows. Row clicks do not cancel—use the buttons.</li>
-              <li>History lists past downloads; Open folder jumps to the file if it still exists.</li>
-              <li>Clear finished in Queue only removes completed or failed rows, not active jobs.</li>
+              <li>Queue: pause, cancel, remove completed.</li>
+              <li>History: log of completed downloads; remove one entry or clear all (files on disk stay).</li>
             </ul>
           </BrutalPanel>
         </motion.div>
@@ -183,8 +175,7 @@ export function Instruction() {
           When you see the fetch overlay
         </h2>
         <p className="mt-3 text-sm font-bold leading-relaxed text-neutral-800">
-          Manual Fetch on Home and Get playlist on Playlist use a full-screen overlay until the request
-          finishes. Auto-fetch on Home uses a thin top bar only so the window stays usable.
+          Fetch and Get playlist use a full-screen overlay until ready. Auto-fetch on Home uses a thin bar.
         </p>
       </motion.div>
 
@@ -194,47 +185,32 @@ export function Instruction() {
           <BrutalPanel className="p-5">
             <h3 className="font-mono text-xs font-black uppercase tracking-wider text-neutral-500">Queue</h3>
             <ul className="mt-3 list-disc space-y-2 pl-5 text-sm font-bold text-neutral-800">
-              <li>
-                Only use Cancel or Pause on a row to stop a download. Tapping the row does not remove a job.
-              </li>
-              <li>
-                Clear finished removes completed, failed, or cancelled items only. Active downloads stay in the
-                queue.
-              </li>
-              <li>Jobs run one at a time in order.</li>
+              <li>Use Pause or Cancel on a row; row click does not stop a job.</li>
+              <li>Clear finished removes done/failed/cancelled rows only.</li>
+              <li>Parallel downloads: 1–3 in Options.</li>
             </ul>
           </BrutalPanel>
           <BrutalPanel className="p-5">
             <h3 className="font-mono text-xs font-black uppercase tracking-wider text-neutral-500">Network</h3>
-            <p className="mt-3 text-sm font-bold text-neutral-800">
-              If you see a short network error, check Wi‑Fi or VPN, then use Fetch or download again.
-            </p>
+            <p className="mt-3 text-sm font-bold text-neutral-800">Retry after checking connection.</p>
           </BrutalPanel>
           <BrutalPanel className="p-5">
             <h3 className="font-mono text-xs font-black uppercase tracking-wider text-neutral-500">
               Sign-in / cookies
             </h3>
-            <p className="mt-3 text-sm font-bold text-neutral-800">
-              Some sites return a sign-in or cookie message for a short time. Waiting and retrying Fetch or
-              download often works without changing anything.
-            </p>
+            <p className="mt-3 text-sm font-bold text-neutral-800">Sign-in messages: try again later.</p>
           </BrutalPanel>
           <BrutalPanel className="p-5">
             <h3 className="font-mono text-xs font-black uppercase tracking-wider text-neutral-500">
               Extra files (.webm, .part)
             </h3>
             <p className="mt-3 text-sm font-bold text-neutral-800">
-              yt-dlp may leave temporary streams while merging. After a successful download, OmniDL tries to
-              remove fragments next to the final file. If a download stops halfway, delete leftover .part or .f###
-              files yourself.
+              Interrupted downloads may leave .part or temp files next to the output.
             </p>
           </BrutalPanel>
           <BrutalPanel className="p-5">
             <h3 className="font-mono text-xs font-black uppercase tracking-wider text-neutral-500">Audio</h3>
-            <p className="mt-3 text-sm font-bold text-neutral-800">
-              Best audio is saved as MP3 when conversion succeeds (bundled ffmpeg). A failed step may leave .webm
-              until you retry.
-            </p>
+            <p className="mt-3 text-sm font-bold text-neutral-800">Audio saves as MP3 when conversion succeeds.</p>
           </BrutalPanel>
         </div>
       </motion.div>

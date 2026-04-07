@@ -3,16 +3,12 @@ import { useEffect } from "react";
 export function DuplicateFileModal({
   open,
   predictedPath,
-  historyHit,
-  fileExists,
   onRedownload,
   onOpenFolder,
   onCancel,
 }: {
   open: boolean;
   predictedPath: string;
-  historyHit: boolean;
-  fileExists: boolean;
   onRedownload: () => void;
   onOpenFolder: () => void;
   onCancel: () => void;
@@ -57,12 +53,8 @@ export function DuplicateFileModal({
           </button>
         </div>
         <p className="mt-3 text-sm font-bold text-neutral-800">
-          A file with this name may already exist, or this URL is already in history.
+          A file with the same output name already exists in the current download folder.
         </p>
-        <ul className="mt-2 list-inside list-disc text-xs font-semibold text-neutral-600">
-          {historyHit ? <li>URL found in download history</li> : null}
-          {fileExists ? <li>Output file already on disk</li> : null}
-        </ul>
         {predictedPath ? (
           <p className="mt-2 break-all font-mono text-[10px] text-neutral-500">{predictedPath}</p>
         ) : null}

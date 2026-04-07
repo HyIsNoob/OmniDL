@@ -23,8 +23,6 @@ export type DuplicateChoice = "redownload" | "open" | "cancel";
 export interface DuplicateAskPayload {
   jobId: string;
   predictedPath: string;
-  historyHit: boolean;
-  fileExists: boolean;
 }
 
 export type JobStatus =
@@ -111,6 +109,5 @@ export interface HistoryRow {
   quality: string;
   kind: DownloadKind;
   createdAt: number;
-  exists: boolean;
   thumbnailPath: string | null;
 }

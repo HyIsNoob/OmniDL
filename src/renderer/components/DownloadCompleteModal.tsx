@@ -5,6 +5,7 @@ export function DownloadCompleteModal({
   batchCount,
   onPlay,
   onOpenFolder,
+  onOpenDownloadsFolder,
   onDone,
 }: {
   open: boolean;
@@ -13,6 +14,7 @@ export function DownloadCompleteModal({
   batchCount?: number | null;
   onPlay: () => void;
   onOpenFolder: () => void;
+  onOpenDownloadsFolder?: () => void;
   onDone: () => void;
 }) {
   if (!open) return null;
@@ -40,14 +42,22 @@ export function DownloadCompleteModal({
         {batch ? (
           <>
             <p className="mt-3 text-sm font-bold text-neutral-800">
-              {batchCount} download(s) completed. Per-item alerts were grouped while the queue was longer than
-              your threshold.
+              {batchCount} download{batchCount === 1 ? "" : "s"} completed.
             </p>
-            <div className="mt-5">
+            <div className="mt-5 flex flex-wrap gap-2">
+              {onOpenDownloadsFolder ? (
+                <button
+                  type="button"
+                  onClick={onOpenDownloadsFolder}
+                  className="inline-flex flex-1 min-w-[140px] items-center justify-center border-4 border-[#111] bg-[#ffe66d] px-3 py-2.5 text-xs font-black uppercase shadow-[4px_4px_0_0_#111] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+                >
+                  Open folder
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={onDone}
-                className="w-full border-4 border-[#111] bg-white px-3 py-2.5 text-xs font-black uppercase shadow-[4px_4px_0_0_#111] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+                className="inline-flex flex-1 min-w-[140px] items-center justify-center border-4 border-[#111] bg-white px-3 py-2.5 text-xs font-black uppercase shadow-[4px_4px_0_0_#111] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
               >
                 Done
               </button>

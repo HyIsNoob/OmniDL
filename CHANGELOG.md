@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-04-07
+
+### Added
+
+- **Data layout**: yt-dlp / FFmpeg live under `omnidl-data` next to the install when writable; profile (settings, DB, thumbnails) stays in AppData.
+
+### Changed
+
+- **History**: log of completed downloads only; **Remove** per row and **Clear all**; removed on-disk status, **Open folder**, and **Clear missing only**.
+- **Duplicate file**: prompt only when the **predicted output path** in the **current download folder** already exists; no history-based duplicate. Improved `--skip-download` path parsing (stdout + stderr) and YouTube filename fallback scan.
+- **Options**: copy clarifies profile vs heavy tools paths.
+- **UI**: settings toast bottom-right with success tint; batch-done **Open folder** uses the job output directory; playlist enqueue success actions aligned right.
+
+### Fixed
+
+- False “file on disk” when only the output folder existed; removed dead `history:clearMissing` IPC.
+
 ## [1.6.0] - 2026-03-27
 
 ### Added

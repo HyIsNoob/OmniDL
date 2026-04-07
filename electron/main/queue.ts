@@ -1,14 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { existsSync, readdirSync, unlinkSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
-import { Notification, app, shell, type BrowserWindow } from "electron";
+import { existsSync, readdirSync, statSync, unlinkSync } from "node:fs";
+import { mediaFileExistsOnDisk, resolveExistingMediaPath, revealPathInExplorer } from "./fs-utils.js";
+import { basename, dirname, join, normalize } from "node:path";
+import { Notification, app, type BrowserWindow } from "electron";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
-import {
-  historyAdd,
-  historyGetExistingMediaPathByUrl,
-  settingsGet,
-} from "./db.js";
-import { normalizeVideoUrl } from "./url.js";
+import { historyAdd, settingsGet } from "./db.js";
+import { extractYoutubeVideoIdFromUrl, normalizeVideoUrl } from "./url.js";
 import { downloadThumbnail } from "./thumbnail.js";
 import { formatYtdlpUserMessage } from "./ytdlp-errors.js";
 import { runYtdlp, runYtdlpDownload, type DownloadProgress } from "./ytdlp.js";
@@ -85,12 +82,23 @@ function pushState(): void {
 function findOutputPath(stderr: string): string | undefined {
   const m1 = /Merging formats into "(.+?)"/.exec(stderr);
   if (m1?.[1]) return m1[1].replace(/\\\\/g, "\\");
-  const m2 = /\[download\] Destination:\s*(.+)/.exec(stderr);
+  const m2 = /\[download\]\s*Destination:\s*(.+)/i.exec(stderr);
   if (m2?.[1]) return m2[1].trim();
-  const m3 = /\[ExtractAudio\] Destination:\s*(.+)/.exec(stderr);
+  const m3 = /\[ExtractAudio\]\s*Destination:\s*(.+)/i.exec(stderr);
   if (m3?.[1]) return m3[1].trim();
   const m4 = /\[Fixup\w*\].*"(.+?)"/.exec(stderr);
   if (m4?.[1]) return m4[1];
+  const lines = stderr.split(/\r?\n/);
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = (lines[i] ?? "").trim();
+    const dm = /Destination:\s*(.+)$/i.exec(line);
+    if (!dm?.[1]) continue;
+    const p = dm[1].replace(/^["']|["']$/g, "").trim();
+    if (!p) continue;
+    if (/\.(mp4|mkv|webm|mp3|m4a|opus|aac|flac|wav|ogg)$/i.test(p)) {
+      return p;
+    }
+  }
   return undefined;
 }
 
@@ -106,6 +114,96 @@ function outputTemplateFor(job: QueueJob): string {
     return `OmniDL_(${slug})_%(title)s [%(id)s] (${job.duplicateIndex}).%(ext)s`;
   }
   return `OmniDL_(${slug})_%(title)s [%(id)s].%(ext)s`;
+}
+
+function parseFilepathFromYtdlpPrintOutput(stdout: string, stderr: string): string | null {
+  const combined = `${stdout}\n${stderr}`;
+  const lines = combined.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const tryLine = (line: string): string | null => {
+    let t = line.trim();
+    if (!t) return null;
+    if (
+      (t.startsWith('"') && t.endsWith('"')) ||
+      (t.startsWith("'") && t.endsWith("'"))
+    ) {
+      t = t.slice(1, -1);
+    }
+    if (/^([A-Za-z]:[\\/]|\\\\)/.test(t) || (t.startsWith("/") && t.length > 2)) {
+      if (/\.(mp4|mkv|webm|mp3|m4a|opus|aac|flac|wav|ogg)$/i.test(t)) {
+        return normalize(t);
+      }
+    }
+    return null;
+  };
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const p = tryLine(lines[i] ?? "");
+    if (p) return p;
+  }
+  return null;
+}
+
+function isExpectedFilenameForDuplicateCheck(
+  name: string,
+  videoId: string,
+  duplicateIndex: number | null | undefined,
+): boolean {
+  const esc = videoId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const ext = "(\\.[a-z0-9]+)$";
+  if (duplicateIndex != null && duplicateIndex > 0) {
+    return new RegExp(`\\[${esc}\\] \\(${duplicateIndex}\\)${ext}`, "i").test(name);
+  }
+  return new RegExp(`\\[${esc}\\]${ext}`, "i").test(name);
+}
+
+function findExistingOutputMatchingJob(job: QueueJob): string | null {
+  const videoId = extractYoutubeVideoIdFromUrl(job.url);
+  if (!videoId) return null;
+  const slug = omniSlugForFilename(job);
+  const prefix = `OmniDL_(${slug})_`;
+  const needle = `[${videoId}]`;
+  const dir = job.outputDir;
+  try {
+    if (!existsSync(dir) || !statSync(dir).isDirectory()) return null;
+  } catch {
+    return null;
+  }
+  const mediaExt = new Set([
+    ".mp3",
+    ".m4a",
+    ".opus",
+    ".aac",
+    ".wav",
+    ".ogg",
+    ".flac",
+    ".mp4",
+    ".mkv",
+    ".webm",
+    ".mov",
+  ]);
+  try {
+    const names = readdirSync(dir);
+    const hits: string[] = [];
+    for (const name of names) {
+      if (!name.startsWith(prefix) || !name.includes(needle)) continue;
+      const low = name.toLowerCase();
+      const dot = low.lastIndexOf(".");
+      if (dot < 0) continue;
+      const ext = low.slice(dot);
+      if (!mediaExt.has(ext)) continue;
+      if (!isExpectedFilenameForDuplicateCheck(name, videoId, job.duplicateIndex)) continue;
+      const full = join(dir, name);
+      try {
+        if (statSync(full).isFile()) hits.push(full);
+      } catch {
+        /* ignore */
+      }
+    }
+    if (hits.length === 0) return null;
+    hits.sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
+    return hits[0]!;
+  } catch {
+    return null;
+  }
 }
 
 let pendingDuplicate: { jobId: string; resolve: (c: DuplicateChoice) => void } | null = null;
@@ -149,7 +247,7 @@ function ytdlpFormatArgs(job: QueueJob): string[] {
 async function predictOutputPath(job: QueueJob): Promise<string | null> {
   try {
     const out = join(job.outputDir, outputTemplateFor(job));
-    const { stdout, code } = await runYtdlp(
+    const { stdout, stderr, code } = await runYtdlp(
       [
         ...ytdlpFormatArgs(job),
         "-o",
@@ -161,25 +259,26 @@ async function predictOutputPath(job: QueueJob): Promise<string | null> {
       ],
       { maxBuffer: 20 * 1024 * 1024 },
     );
+    const parsed = parseFilepathFromYtdlpPrintOutput(stdout, stderr);
+    if (parsed) return parsed;
     if (code !== 0) return null;
-    const lines = stdout.trim().split(/\r?\n/).filter(Boolean);
-    const last = lines[lines.length - 1]?.trim();
-    return last && last.length > 0 ? last : null;
+    return null;
   } catch {
     return null;
   }
 }
 
 async function resolveDuplicate(job: QueueJob): Promise<"proceed" | "skip" | "abort"> {
-  const predicted = await predictOutputPath(job);
-  const historyPath = historyGetExistingMediaPathByUrl(job.url, job.kind);
-  const predictedExists = predicted != null && existsSync(predicted);
-  if (!historyPath && !predictedExists) return "proceed";
-
-  const openTarget =
-    predictedExists && predicted
-      ? predicted
-      : historyPath ?? (predicted ?? undefined);
+  let predicted = await predictOutputPath(job);
+  let predictedExists = predicted != null && mediaFileExistsOnDisk(predicted);
+  if (!predictedExists) {
+    const scout = findExistingOutputMatchingJob(job);
+    if (scout != null && mediaFileExistsOnDisk(scout)) {
+      predicted = scout;
+      predictedExists = true;
+    }
+  }
+  if (!predictedExists) return "proceed";
 
   if (!targetWindow || targetWindow.isDestroyed()) {
     return "abort";
@@ -190,15 +289,13 @@ async function resolveDuplicate(job: QueueJob): Promise<"proceed" | "skip" | "ab
     targetWindow!.webContents.send("duplicate:ask", {
       jobId: job.id,
       predictedPath: predicted ?? "",
-      historyHit: historyPath != null,
-      fileExists: predictedExists,
     });
   });
 
   if (choice === "cancel") return "abort";
   if (choice === "open") {
-    if (openTarget && existsSync(openTarget)) {
-      shell.showItemInFolder(openTarget);
+    if (predicted) {
+      revealPathInExplorer(predicted);
     }
     return "skip";
   }
@@ -299,10 +396,17 @@ async function runJob(job: QueueJob): Promise<void> {
       }
       job.status = "completed";
       job.progress = 100;
-      const outPath = findOutputPath(stderr);
-      if (outPath && existsSync(outPath)) {
-        job.outputPath = outPath;
-        cleanupYtdlpSidecars(outPath);
+      const rawOut = findOutputPath(stderr);
+      let finalOut: string | undefined;
+      if (rawOut) {
+        finalOut = resolveExistingMediaPath(rawOut) ?? undefined;
+        if (!finalOut && existsSync(rawOut)) {
+          finalOut = rawOut;
+        }
+      }
+      if (finalOut) {
+        job.outputPath = finalOut;
+        cleanupYtdlpSidecars(finalOut);
       } else {
         job.outputPath = job.outputDir;
       }
@@ -334,6 +438,9 @@ async function runJob(job: QueueJob): Promise<void> {
       if (T > 0 && totalJobs > T) {
         if (remainingActive > 0) {
           completionBatchCount++;
+          if (targetWindow && !targetWindow.isDestroyed()) {
+            targetWindow.webContents.send("download:batchPeek", { title: job.title });
+          }
         } else {
           completionBatchCount++;
           const cnt = completionBatchCount;
@@ -345,7 +452,10 @@ async function runJob(job: QueueJob): Promise<void> {
             }).show();
           }
           if (targetWindow && !targetWindow.isDestroyed()) {
-            targetWindow.webContents.send("download:batchDone", { count: cnt });
+            targetWindow.webContents.send("download:batchDone", {
+              count: cnt,
+              outputDir: job.outputDir,
+            });
           }
         }
       } else {
@@ -371,7 +481,6 @@ async function runJob(job: QueueJob): Promise<void> {
 
 async function pump(): Promise<void> {
   if (pumpBusy) return;
-  if (jobs.some((j) => j.status === "paused")) return;
   const max = getMaxConcurrency();
   const running = jobs.filter((j) => j.status === "downloading").length;
   const slots = max - running;
@@ -379,7 +488,7 @@ async function pump(): Promise<void> {
   pumpBusy = true;
   try {
     for (let i = 0; i < slots; i++) {
-      const next = jobs.find((j) => j.status === "pending");
+      const next = jobs.find((j) => j.status === "pending" && !pendingClaimed.has(j.id));
       if (!next) break;
       void runJob(next);
     }

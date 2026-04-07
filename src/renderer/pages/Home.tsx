@@ -766,10 +766,7 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
           >
             <BrutalPanel className="p-5">
               <div className="text-sm font-black uppercase tracking-wide">Home overview</div>
-              <p className="mt-2 text-xs font-semibold text-neutral-600">
-                Paste a link above, then Fetch. This panel hides while loading and after a video is ready to
-                download.
-              </p>
+              <p className="mt-2 text-xs font-semibold text-neutral-600">Paste a URL and fetch to start.</p>
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div className="border-4 border-[#111] bg-white p-4 text-center">
                   <div className="text-[10px] font-black uppercase text-neutral-500">Active in queue</div>

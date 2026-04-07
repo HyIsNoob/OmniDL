@@ -339,7 +339,7 @@ export function Playlist() {
               <p className="mt-3 text-sm font-bold text-neutral-700">
                 {lastEnqueueCount} item(s) were added to the download queue.
               </p>
-              <div className="mt-6 flex flex-wrap gap-2">
+              <div className="mt-6 flex flex-wrap justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setEnqueueSuccessOpen(false)}
@@ -453,9 +453,7 @@ export function Playlist() {
                       />
                     </div>
                   ) : (
-                    <p className="mt-2 text-[11px] font-bold text-neutral-600">
-                      All thumbnails refreshed for this session.
-                    </p>
+                    <p className="mt-2 text-[11px] font-bold text-neutral-600">Done.</p>
                   )}
                 </motion.div>
               ) : null}
@@ -472,9 +470,7 @@ export function Playlist() {
                   >
                     {thumbBulkBusy ? "Saving…" : "Download all thumbnails"}
                   </motion.button>
-                  <p className="mt-2 text-[11px] font-semibold text-neutral-600">
-                    Pick a folder once; files are named 001_title.jpg, 002_title.jpg, …
-                  </p>
+                  <p className="mt-2 text-[11px] font-semibold text-neutral-600">001_title.jpg, …</p>
                 </motion.div>
               ) : null}
 

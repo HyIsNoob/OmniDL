@@ -82,9 +82,9 @@ export function Queue() {
         body={
           pending?.type === "clear"
             ? hasActiveWork
-              ? "Only completed, failed, or cancelled rows are removed. Items still downloading or waiting stay in the queue."
-              : "Remove completed, failed, or cancelled rows from the list."
-            : "The download stops and this row is removed from the queue."
+              ? "Removes finished rows. Active jobs stay."
+              : "Remove finished rows from the list."
+            : "Stop this download and remove the row."
         }
         confirmText={pending?.type === "clear" ? "Clear" : "Cancel"}
         cancelText="Close"

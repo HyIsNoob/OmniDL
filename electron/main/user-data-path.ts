@@ -1,28 +1,12 @@
-import { existsSync, mkdirSync, cpSync, writeFileSync, unlinkSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, mkdirSync, cpSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { app } from "electron";
+import { readForceAdminBootstrap } from "./data-location-bootstrap.js";
+import { isWindowsProcessElevated } from "./windows-elevate.js";
 
 const PORTABLE_DIR_NAME = "omnidl-data";
 
-function tryCopyIfExists(from: string, to: string): void {
-  if (!existsSync(from)) return;
-  cpSync(from, to, { recursive: true });
-}
-
-function migrateLegacyToPortable(legacyRoot: string, portableRoot: string): void {
-  if (existsSync(join(portableRoot, "omnidl.db"))) return;
-  if (!existsSync(join(legacyRoot, "omnidl.db"))) return;
-  try {
-    tryCopyIfExists(join(legacyRoot, "omnidl.db"), join(portableRoot, "omnidl.db"));
-    tryCopyIfExists(join(legacyRoot, "omnidl.db-wal"), join(portableRoot, "omnidl.db-wal"));
-    tryCopyIfExists(join(legacyRoot, "omnidl.db-shm"), join(portableRoot, "omnidl.db-shm"));
-    tryCopyIfExists(join(legacyRoot, "thumbnails"), join(portableRoot, "thumbnails"));
-    tryCopyIfExists(join(legacyRoot, "bin"), join(portableRoot, "bin"));
-    tryCopyIfExists(join(legacyRoot, "ffmpeg-bin"), join(portableRoot, "ffmpeg-bin"));
-  } catch {
-    /* ignore */
-  }
-}
+let heavyStoragePathCache = "";
 
 function canWriteDir(dir: string): boolean {
   try {
@@ -35,23 +19,91 @@ function canWriteDir(dir: string): boolean {
   }
 }
 
-export function applyPortableUserDataPath(): void {
-  if (!app.isPackaged) return;
-  const legacyRoot = app.getPath("userData");
-  const exeDir = dirname(process.execPath);
-  const portableRoot = join(exeDir, PORTABLE_DIR_NAME);
+function safeRemoveDir(dir: string): void {
+  try {
+    if (existsSync(dir)) {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+function copyHeavyDirsIfMissing(from: string, to: string): void {
+  try {
+    mkdirSync(to, { recursive: true });
+  } catch {
+    /* ignore */
+  }
+  for (const name of ["bin", "ffmpeg-bin"]) {
+    const src = join(from, name);
+    const dst = join(to, name);
+    if (!existsSync(src)) continue;
+    if (existsSync(dst)) continue;
+    try {
+      cpSync(src, dst, { recursive: true });
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+function pruneHeavyDirsOnly(roamingOrSource: string): void {
+  for (const name of ["bin", "ffmpeg-bin"]) {
+    safeRemoveDir(join(roamingOrSource, name));
+  }
+}
+
+function portableHasHeavyBins(portableRoot: string): boolean {
+  const exe = process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp";
+  return existsSync(join(portableRoot, "bin", exe));
+}
+
+export function initHeavyStorageAndMigrate(): string {
+  if (!app.isPackaged) {
+    const roaming = app.getPath("userData");
+    heavyStoragePathCache = roaming;
+    return roaming;
+  }
+
+  const roaming = app.getPath("userData");
+  const portableRoot = join(dirname(process.execPath), PORTABLE_DIR_NAME);
+
+  const forceAdmin = readForceAdminBootstrap();
+  const elevated = process.platform === "win32" && isWindowsProcessElevated();
+
   try {
     mkdirSync(portableRoot, { recursive: true });
   } catch {
-    return;
+    /* ignore */
   }
-  if (!canWriteDir(portableRoot)) return;
-  migrateLegacyToPortable(legacyRoot, portableRoot);
-  try {
-    app.setPath("userData", portableRoot);
-  } catch {
-    /* keep default */
+
+  const portableWritable =
+    canWriteDir(portableRoot) ||
+    (process.platform === "win32" && forceAdmin && elevated);
+
+  if (portableWritable) {
+    copyHeavyDirsIfMissing(roaming, portableRoot);
+    if (portableHasHeavyBins(portableRoot)) {
+      pruneHeavyDirsOnly(roaming);
+    }
+    heavyStoragePathCache = portableRoot;
+    return portableRoot;
   }
+
+  copyHeavyDirsIfMissing(portableRoot, roaming);
+  if (portableHasHeavyBins(roaming)) {
+    pruneHeavyDirsOnly(portableRoot);
+  }
+  heavyStoragePathCache = roaming;
+  return roaming;
+}
+
+export function getHeavyStoragePath(): string {
+  if (!heavyStoragePathCache) {
+    throw new Error("Heavy storage not initialized");
+  }
+  return heavyStoragePathCache;
 }
 
 export function getPortableTargetPath(): string {
@@ -59,9 +111,12 @@ export function getPortableTargetPath(): string {
   return join(dirname(process.execPath), PORTABLE_DIR_NAME);
 }
 
-export function isUsingPortableDataPath(): boolean {
+export function isHeavyDataOnPortable(): boolean {
   if (!app.isPackaged) return false;
-  const active = getPortableTargetPath();
-  const current = app.getPath("userData");
-  return active.replace(/\\/g, "/").toLowerCase() === current.replace(/\\/g, "/").toLowerCase();
+  const portable = getPortableTargetPath();
+  try {
+    return getHeavyStoragePath().replace(/\\/g, "/").toLowerCase() === portable.replace(/\\/g, "/").toLowerCase();
+  } catch {
+    return false;
+  }
 }

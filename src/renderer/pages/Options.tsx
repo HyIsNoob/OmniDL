@@ -34,6 +34,8 @@ export function Options() {
   const queueConcurrency = useSettingsStore((s) => s.queueConcurrency);
   const setNotifyBatchThreshold = useSettingsStore((s) => s.setNotifyBatchThreshold);
   const setQueueConcurrency = useSettingsStore((s) => s.setQueueConcurrency);
+  const dataLocationForceAdmin = useSettingsStore((s) => s.dataLocationForceAdmin);
+  const setDataLocationForceAdmin = useSettingsStore((s) => s.setDataLocationForceAdmin);
   const pendingInstall = useUpdateUiStore((s) => s.pendingInstall);
   const reopenInstall = useUpdateUiStore((s) => s.reopenInstall);
   const setUpdateError = useUpdateUiStore((s) => s.setError);
@@ -43,9 +45,13 @@ export function Options() {
   const [storageCleanable, setStorageCleanable] = useState<number | null>(null);
   const [storageTotal, setStorageTotal] = useState<number | null>(null);
   const [dataPathInfo, setDataPathInfo] = useState<{
-    activePath: string;
+    lightPath: string;
+    heavyPath: string;
     portableTargetPath: string;
-    portableActive: boolean;
+    heavyOnPortable: boolean;
+    platform: string;
+    isElevated: boolean;
+    packaged: boolean;
   } | null>(null);
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const stagger = useTabContentStagger();
@@ -92,7 +98,7 @@ export function Options() {
       <ConfirmModal
         open={confirmClearOpen}
         title="Clear cache and local app data?"
-        body="This removes the history database, saved thumbnails, and Chromium disk caches under the app profile folder. yt-dlp and ffmpeg copies are kept so downloads still work. Your chosen download folder is not touched. The window will reload."
+        body="Clears history, thumbnails, and app caches. Download folder is unchanged. Window reloads."
         confirmText="Clear and reload"
         cancelText="Cancel"
         danger
@@ -108,9 +114,7 @@ export function Options() {
           Clipboard & fetch
         </div>
         <p className="mt-2 text-sm font-semibold text-neutral-600">
-          When enabled, OmniDL looks for supported https URLs (YouTube, TikTok, Facebook) inside clipboard
-          text. Only the Home tab auto-pastes (including right after you switch to Home). Playlist does not
-          auto-paste; other tabs do not auto-paste. Auto-fetch runs when the Home URL changes.
+          Clipboard: on Home only. Auto-fetch: when the URL on Home changes.
         </p>
         <label className="mt-4 flex cursor-pointer items-start gap-3 border-4 border-[#111] bg-white p-3 font-bold transition-colors hover:bg-neutral-50">
           <input
@@ -122,7 +126,7 @@ export function Options() {
           <span>
             <span className="font-black uppercase">Detect clipboard</span>
             <span className="mt-1 block text-xs font-semibold text-neutral-600">
-              YouTube / TikTok / Facebook — only while you are on Home (video, reel, or YouTube playlist URL)
+              YouTube / TikTok / Facebook on Home
             </span>
           </span>
         </label>
@@ -135,9 +139,7 @@ export function Options() {
           />
           <span>
             <span className="font-black uppercase">Auto-fetch</span>
-            <span className="mt-1 block text-xs font-semibold text-neutral-600">
-              Fetch metadata after the URL changes (debounced)
-            </span>
+            <span className="mt-1 block text-xs font-semibold text-neutral-600">After URL changes</span>
           </span>
         </label>
       </BrutalPanel>
@@ -147,9 +149,7 @@ export function Options() {
       <BrutalPanel className="p-5">
         <div className="text-lg font-black">Motion</div>
         <p className="mt-2 text-sm font-semibold text-neutral-600">
-          Full animation: spectrum loader, staggered panels on Home, Playlist, Queue, History, Options, and
-          Instruction, tab sweep, and a dimmed playlist fetch overlay. Reduced: instant tab content, no
-          stagger, darker playlist overlay without blur, static loading blocks (lower CPU/GPU).
+          Full: motion and transitions. Reduced: less motion and simpler effects.
         </p>
         <div className="mt-4 flex flex-col gap-2">
           {(
@@ -181,10 +181,7 @@ export function Options() {
       <motion.div variants={stagger.section}>
       <BrutalPanel className="p-5">
         <div className="text-lg font-black">Playlist</div>
-        <p className="mt-2 text-sm font-semibold text-neutral-600">
-          After a fast flat playlist load, you can fetch per-video thumbnails for sharper images (slower, runs
-          in the background).
-        </p>
+        <p className="mt-2 text-sm font-semibold text-neutral-600">Optional sharper thumbnails after load.</p>
         <label className="mt-4 flex cursor-pointer items-start gap-3 border-4 border-[#111] bg-white p-3 font-bold transition-colors hover:bg-neutral-50">
           <input
             type="checkbox"
@@ -194,9 +191,7 @@ export function Options() {
           />
           <span>
             <span className="font-black uppercase">Full playlist thumbnails</span>
-            <span className="mt-1 block text-xs font-semibold text-neutral-600">
-              After Get playlist, fetch HD thumbnails per item and update the grid as they arrive
-            </span>
+            <span className="mt-1 block text-xs font-semibold text-neutral-600">HD per item in background</span>
           </span>
         </label>
       </BrutalPanel>
@@ -206,7 +201,7 @@ export function Options() {
       <BrutalPanel className="p-5">
         <div className="text-lg font-black">Queue</div>
         <p className="mt-2 text-sm font-semibold text-neutral-600">
-          How many downloads run at once (each uses yt-dlp). Duplicate prompts still run one at a time.
+          Parallel downloads. Duplicate prompts stay one at a time.
         </p>
         <div className="mt-4 flex flex-col gap-2">
           {([1, 2, 3] as const).map((n) => (
@@ -239,9 +234,7 @@ export function Options() {
           Notifications
         </div>
         <p className="mt-2 text-sm font-semibold text-neutral-600">
-          When the queue has more jobs than the batch threshold, per-file OS toasts and the in-app completion
-          dialog are deferred until the queue is idle; then one summary is shown. Set threshold to 0 to always
-          notify per file (same as before).
+          0 = notify each file. Higher = one summary when the queue clears (busy queue).
         </p>
         <label className="mt-4 flex cursor-pointer items-start gap-3 border-4 border-[#111] bg-white p-3 font-bold transition-colors hover:bg-neutral-50">
           <input
@@ -252,17 +245,12 @@ export function Options() {
           />
           <span>
             <span className="font-black uppercase">System push notifications</span>
-            <span className="mt-1 block text-xs font-semibold text-neutral-600">
-              Windows notification for completed downloads (default on)
-            </span>
+            <span className="mt-1 block text-xs font-semibold text-neutral-600">When a download finishes</span>
           </span>
         </label>
         <label className="mt-4 flex flex-col gap-2 border-4 border-[#111] bg-white p-3 font-bold">
           <span className="font-black uppercase">Batch notification threshold</span>
-          <span className="text-xs font-semibold text-neutral-600">
-            0 = always show each file. Default 5: when the queue has more than 5 jobs, completion toasts are
-            grouped until the queue is idle. You can set 1–1000 for a different threshold.
-          </span>
+          <span className="text-xs font-semibold text-neutral-600">0–1000. Default 5.</span>
           <input
             type="number"
             min={0}
@@ -282,27 +270,75 @@ export function Options() {
       <BrutalPanel className="p-5">
         <div className="text-lg font-black">App data location</div>
         <p className="mt-2 text-xs font-semibold leading-relaxed text-neutral-600">
-          Paths are <span className="font-black text-neutral-800">per machine</span> (user, drive, install
-          path)—not fixed in code. Prefer <span className="font-mono text-[11px]">omnidl-data</span> next to the
-          exe when writable; else Roaming. <span className="font-black text-neutral-800">Migrate:</span> first
-          launch copies Roaming → that folder once if it was empty. <span className="font-black text-neutral-800">After:</span> if Active is already next to the exe, the old Roaming folder is dead weight—delete it; the app
-          will not repopulate it.
+          Settings, database, and small files stay in your profile (AppData). yt-dlp and FFmpeg use a
+          separate folder: <span className="font-mono text-[11px]">omnidl-data</span> next to the app when
+          writable, otherwise under the same profile path.
         </p>
         {dataPathInfo ? (
           <div className="mt-3 space-y-2 border-4 border-dashed border-neutral-400 bg-white/80 p-3 text-xs font-bold text-neutral-800">
             <div>
-              <span className="text-neutral-500">Active (app writes here): </span>
-              <span className="break-all font-mono text-[11px]">{dataPathInfo.activePath}</span>
+              <span className="text-neutral-500">Profile (settings, DB, thumbnails): </span>
+              <span className="break-all font-mono text-[11px]">{dataPathInfo.lightPath}</span>
             </div>
-            {dataPathInfo.portableActive ? (
-              <p className="text-[11px] font-semibold text-neutral-600">Portable mode: data next to the exe.</p>
+            <div>
+              <span className="text-neutral-500">Tools (yt-dlp, FFmpeg): </span>
+              <span className="break-all font-mono text-[11px]">{dataPathInfo.heavyPath}</span>
+            </div>
+            {dataPathInfo.heavyOnPortable ? (
+              <p className="text-[11px] font-semibold text-neutral-600">
+                Heavy tools are next to the app executable.
+              </p>
             ) : (
               <div>
-                <span className="text-neutral-500">Preferred if writable: </span>
+                <span className="text-neutral-500">Preferred for tools if writable: </span>
                 <span className="break-all font-mono text-[11px]">{dataPathInfo.portableTargetPath}</span>
               </div>
             )}
+            {dataPathInfo.platform === "win32" && dataPathInfo.isElevated ? (
+              <p className="text-[11px] font-black uppercase tracking-wide text-emerald-800">
+                Administrator session
+              </p>
+            ) : null}
           </div>
+        ) : null}
+        {dataPathInfo?.platform === "win32" && dataPathInfo.packaged ? (
+          <div className="mt-4 space-y-3 border-4 border-[#111] bg-white p-3">
+            <div className="text-xs font-black uppercase">Write access mode</div>
+            <label className="flex cursor-pointer items-start gap-3 font-bold transition-colors hover:bg-neutral-50">
+              <input
+                type="radio"
+                name="dataLocMode"
+                className="mt-1 h-4 w-4"
+                checked={!dataLocationForceAdmin}
+                onChange={() => void setDataLocationForceAdmin(false)}
+              />
+              <span>
+                <span className="font-black uppercase">Normal</span>
+                <span className="mt-1 block text-xs font-semibold text-neutral-600">
+                  Use folder next to the app when writable; otherwise AppData.
+                </span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-3 font-bold transition-colors hover:bg-neutral-50">
+              <input
+                type="radio"
+                name="dataLocMode"
+                className="mt-1 h-4 w-4"
+                checked={dataLocationForceAdmin}
+                onChange={() => void setDataLocationForceAdmin(true)}
+              />
+              <span>
+                <span className="font-black uppercase">Force administrator</span>
+                <span className="mt-1 block text-xs font-semibold text-neutral-600">
+                  UAC on every launch while this is on. Restart applies the change.
+                </span>
+              </span>
+            </label>
+          </div>
+        ) : dataPathInfo?.platform === "win32" && !dataPathInfo.packaged ? (
+          <p className="mt-3 text-xs font-semibold text-neutral-500">
+            Administrator mode is for the installed Windows build (not dev).
+          </p>
         ) : null}
         <dl className="mt-4 grid max-w-lg grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm font-bold text-neutral-800">
           <dt className="text-neutral-500">Cleanable (approx.)</dt>
@@ -361,10 +397,7 @@ export function Options() {
             </>
           ) : null}
         </div>
-        <p className="mt-2 text-xs font-semibold text-neutral-600">
-          App updates use a dialog: download progress, then restart to install. You can hide the dialog while
-          downloading.
-        </p>
+        <p className="mt-2 text-xs font-semibold text-neutral-600">Download update, then restart to install.</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <motion.button
             type="button"

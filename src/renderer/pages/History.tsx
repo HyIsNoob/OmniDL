@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { FolderOpen, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import type { HistoryRow } from "@shared/ipc";
 import { BrutalPanel } from "../components/BrutalPanel";
 import { useTabContentStagger } from "../lib/tabContentMotion";
@@ -12,10 +12,7 @@ const PAGE = 20;
 const btnHover =
   "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#111] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none";
 
-type Pending =
-  | { type: "clear" }
-  | { type: "remove"; id: string }
-  | null;
+type Pending = { type: "remove"; id: string } | null;
 
 export function History() {
   const stagger = useTabContentStagger();
@@ -23,6 +20,7 @@ export function History() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [pending, setPending] = useState<Pending>(null);
+  const [clearAllOpen, setClearAllOpen] = useState(false);
 
   const loadInitial = useCallback(async () => {
     setLoading(true);
@@ -62,20 +60,14 @@ export function History() {
     >
       <ConfirmModal
         open={pending !== null}
-        title={pending?.type === "clear" ? "Clear all history?" : "Remove this entry?"}
-        body={
-          pending?.type === "clear"
-            ? "All history entries will be removed from the app. This cannot be undone."
-            : "The entry is removed from the list. Files on disk (if any) are not deleted."
-        }
-        confirmText={pending?.type === "clear" ? "Clear all" : "Remove"}
+        title="Remove this entry?"
+        body="The entry is removed from the list. Files on disk are not deleted."
+        confirmText="Remove"
         cancelText="Cancel"
         danger
         onClose={() => setPending(null)}
         onConfirm={() => {
-          if (pending?.type === "clear") {
-            void window.omnidl.historyClear().then(() => void loadInitial());
-          } else if (pending?.type === "remove") {
+          if (pending?.type === "remove") {
             const id = pending.id;
             void window.omnidl.historyRemove(id).then(() => {
               setRows((prev) => prev.filter((x) => x.id !== id));
@@ -84,12 +76,24 @@ export function History() {
           }
         }}
       />
+      <ConfirmModal
+        open={clearAllOpen}
+        title="Clear all history?"
+        body="Removes every entry from this list. Files on disk are not deleted."
+        confirmText="Clear all"
+        cancelText="Cancel"
+        danger
+        onClose={() => setClearAllOpen(false)}
+        onConfirm={() => {
+          void window.omnidl.historyClear().then(() => void loadInitial());
+        }}
+      />
       <motion.div variants={stagger.section} className="flex flex-wrap items-center justify-end gap-3">
         <motion.button
           type="button"
           whileHover={{ y: -2 }}
           whileTap={{ scale: 0.98 }}
-          onClick={() => setPending({ type: "clear" })}
+          onClick={() => setClearAllOpen(true)}
           className={`inline-flex items-center gap-2 border-4 border-[#111] bg-white px-3 py-2 text-xs font-black uppercase shadow-[4px_4px_0_0_#111] ${btnHover}`}
         >
           <Trash2 className="h-4 w-4" strokeWidth={2} aria-hidden />
@@ -122,34 +126,18 @@ export function History() {
                       <div className="mt-1 text-xs font-bold text-neutral-700">
                         {h.quality} · {h.kind} · {new Date(h.createdAt).toLocaleString()}
                       </div>
-                      <div className="mt-1 text-xs font-bold">
-                        {h.exists ? "File on disk" : "File missing"}
-                      </div>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <motion.button
-                      type="button"
-                      disabled={!h.exists}
-                      whileHover={h.exists ? { y: -2 } : undefined}
-                      whileTap={h.exists ? { scale: 0.98 } : undefined}
-                      onClick={() => void window.omnidl.showItemInFolder(h.mediaPath)}
-                      className={`inline-flex items-center gap-2 border-4 border-[#111] bg-[#4ecdc4] px-2 py-1.5 text-xs font-black uppercase disabled:opacity-40 ${btnHover}`}
-                    >
-                      <FolderOpen className="h-4 w-4" strokeWidth={2} aria-hidden />
-                      Open folder
-                    </motion.button>
-                    <motion.button
-                      type="button"
-                      whileHover={{ y: -2 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setPending({ type: "remove", id: h.id })}
-                      className={`inline-flex items-center gap-2 border-4 border-[#111] bg-white px-2 py-1.5 text-xs font-black uppercase ${btnHover}`}
-                    >
-                      <Trash2 className="h-4 w-4" strokeWidth={2} aria-hidden />
-                      Remove
-                    </motion.button>
-                  </div>
+                  <motion.button
+                    type="button"
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setPending({ type: "remove", id: h.id })}
+                    className={`inline-flex items-center gap-2 border-4 border-[#111] bg-white px-2 py-1.5 text-xs font-black uppercase ${btnHover}`}
+                  >
+                    <Trash2 className="h-4 w-4" strokeWidth={2} aria-hidden />
+                    Remove
+                  </motion.button>
                 </div>
               </BrutalPanel>
             </motion.li>

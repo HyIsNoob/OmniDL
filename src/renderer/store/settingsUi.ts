@@ -10,6 +10,7 @@ type S = {
   animationLevel: AnimationLevel;
   notifyBatchThreshold: number;
   queueConcurrency: 1 | 2 | 3;
+  dataLocationForceAdmin: boolean;
   hydrated: boolean;
   settingsSavedNotice: string | null;
   hydrate: () => Promise<void>;
@@ -20,6 +21,7 @@ type S = {
   setAnimationLevel: (v: AnimationLevel) => Promise<void>;
   setNotifyBatchThreshold: (n: number) => Promise<void>;
   setQueueConcurrency: (n: 1 | 2 | 3) => Promise<void>;
+  setDataLocationForceAdmin: (v: boolean) => Promise<void>;
 };
 
 const SAVED_MS = 2200;
@@ -29,7 +31,7 @@ function flashSaved(set: (partial: Partial<S>) => void): void {
   window.setTimeout(() => set({ settingsSavedNotice: null }), SAVED_MS);
 }
 
-export const useSettingsStore = create<S>((set) => ({
+export const useSettingsStore = create<S>((set, get) => ({
   clipboardWatch: false,
   autoFetch: false,
   notificationsPush: true,
@@ -37,6 +39,7 @@ export const useSettingsStore = create<S>((set) => ({
   animationLevel: "full",
   notifyBatchThreshold: 5,
   queueConcurrency: 1,
+  dataLocationForceAdmin: false,
   hydrated: false,
   settingsSavedNotice: null,
   hydrate: async () => {
@@ -55,6 +58,8 @@ export const useSettingsStore = create<S>((set) => ({
       const qcRaw = await window.omnidl.settingsGet("queueConcurrency");
       const qcNum = qcRaw != null && qcRaw !== "" ? parseInt(qcRaw, 10) : 1;
       const queueConcurrency = (qcNum >= 2 && qcNum <= 3 ? qcNum : 1) as 1 | 2 | 3;
+      const dataLocationForceAdmin =
+        (await window.omnidl.settingsGet("dataLocationForceAdmin")) === "1";
       set({
         clipboardWatch: cw,
         autoFetch: af,
@@ -63,6 +68,7 @@ export const useSettingsStore = create<S>((set) => ({
         animationLevel,
         notifyBatchThreshold: nbt,
         queueConcurrency,
+        dataLocationForceAdmin,
         hydrated: true,
       });
     } catch {
@@ -104,5 +110,22 @@ export const useSettingsStore = create<S>((set) => ({
     await window.omnidl.settingsSet("queueConcurrency", String(n));
     set({ queueConcurrency: n });
     flashSaved(set);
+  },
+  setDataLocationForceAdmin: async (v) => {
+    const prev = get().dataLocationForceAdmin;
+    await window.omnidl.settingsSet("dataLocationForceAdmin", v ? "1" : "0");
+    set({ dataLocationForceAdmin: v });
+    flashSaved(set);
+    if (v) {
+      const info = await window.omnidl.getDataPathInfo();
+      if (info.packaged) {
+        await window.omnidl.relaunchElevated();
+      }
+    } else if (prev) {
+      const info = await window.omnidl.getDataPathInfo();
+      if (info.isElevated) {
+        await window.omnidl.relaunchNormal();
+      }
+    }
   },
 }));

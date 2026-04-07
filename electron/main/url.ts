@@ -36,6 +36,29 @@ export function looksLikeYtOrTiktok(text: string): boolean {
   );
 }
 
+export function extractYoutubeVideoIdFromUrl(url: string): string | null {
+  const raw = url.trim();
+  try {
+    const u = new URL(raw);
+    const host = u.hostname.replace(/^www\./, "").toLowerCase();
+    if (host === "youtu.be") {
+      const seg = u.pathname.replace(/^\//, "").split("/")[0] ?? "";
+      return /^[\w-]{11}$/.test(seg) ? seg : null;
+    }
+    if (host.includes("youtube.com")) {
+      const v = u.searchParams.get("v");
+      if (v && /^[\w-]{11}$/.test(v)) return v;
+      const shorts = /\/shorts\/([\w-]+)/.exec(u.pathname);
+      if (shorts?.[1] && /^[\w-]{11}$/.test(shorts[1])) return shorts[1];
+      const live = /\/live\/([\w-]+)/.exec(u.pathname);
+      if (live?.[1] && /^[\w-]{11}$/.test(live[1])) return live[1];
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function looksLikeYoutubePlaylistOnlyUrl(text: string): boolean {
   const raw = text.trim();
   if (!raw) return false;

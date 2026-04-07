@@ -15,14 +15,20 @@ const api = {
   getUserDataPath: () => ipcRenderer.invoke("app:getUserDataPath") as Promise<string>,
   getDataPathInfo: () =>
     ipcRenderer.invoke("app:getDataPathInfo") as Promise<{
-      activePath: string;
+      lightPath: string;
+      heavyPath: string;
       portableTargetPath: string;
-      portableActive: boolean;
+      heavyOnPortable: boolean;
+      platform: string;
+      isElevated: boolean;
+      packaged: boolean;
     }>,
   getStorageStats: () =>
     ipcRenderer.invoke("app:getStorageStats") as Promise<{ cleanable: number; total: number }>,
   openUserDataFolder: () => ipcRenderer.invoke("app:openUserDataFolder") as Promise<void>,
   clearCleanableAppData: () => ipcRenderer.invoke("app:clearCleanableData") as Promise<void>,
+  relaunchElevated: () => ipcRenderer.invoke("app:relaunchElevated") as Promise<boolean>,
+  relaunchNormal: () => ipcRenderer.invoke("app:relaunchNormal") as Promise<boolean>,
   pathsDownloads: () => ipcRenderer.invoke("paths:downloads") as Promise<string>,
   normalizeUrl: (url: string) => ipcRenderer.invoke("url:normalize", url) as Promise<string>,
   ytdlpGetVersion: () => ipcRenderer.invoke("ytdlp:getVersion") as Promise<string | null>,
@@ -105,10 +111,15 @@ const api = {
     ipcRenderer.on("download:done", fn);
     return () => ipcRenderer.removeListener("download:done", fn);
   },
-  onDownloadBatchDone: (cb: (p: { count: number }) => void) => {
-    const fn = (_: unknown, p: { count: number }) => cb(p);
+  onDownloadBatchDone: (cb: (p: { count: number; outputDir: string }) => void) => {
+    const fn = (_: unknown, p: { count: number; outputDir: string }) => cb(p);
     ipcRenderer.on("download:batchDone", fn);
     return () => ipcRenderer.removeListener("download:batchDone", fn);
+  },
+  onDownloadBatchPeek: (cb: (p: { title: string }) => void) => {
+    const fn = (_: unknown, p: { title: string }) => cb(p);
+    ipcRenderer.on("download:batchPeek", fn);
+    return () => ipcRenderer.removeListener("download:batchPeek", fn);
   },
   onDuplicateAsk: (cb: (p: DuplicateAskPayload) => void) => {
     const fn = (_: unknown, p: DuplicateAskPayload) => cb(p);

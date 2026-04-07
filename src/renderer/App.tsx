@@ -52,6 +52,9 @@ export default function App() {
   const [appVersion, setAppVersion] = useState("");
   const [downloadDone, setDownloadDone] = useState<{ title: string; path: string } | null>(null);
   const [batchDoneCount, setBatchDoneCount] = useState<number | null>(null);
+  const [batchDoneOutputDir, setBatchDoneOutputDir] = useState<string | null>(null);
+  const [batchPeekTitle, setBatchPeekTitle] = useState<string | null>(null);
+  const batchPeekTimerRef = useRef<number | null>(null);
   const [dupAsk, setDupAsk] = useState<DuplicateAskPayload | null>(null);
 
   useEffect(() => {
@@ -70,15 +73,32 @@ export default function App() {
   useEffect(() => {
     const offDone = window.omnidl.onDownloadDone((p) => {
       setBatchDoneCount(null);
+      setBatchDoneOutputDir(null);
       setDownloadDone({ title: p.title, path: p.path });
     });
     const offBatch = window.omnidl.onDownloadBatchDone((p) => {
       setDownloadDone(null);
       setBatchDoneCount(p.count);
+      setBatchDoneOutputDir(p.outputDir);
     });
     return () => {
       offDone();
       offBatch();
+    };
+  }, []);
+
+  useEffect(() => {
+    const off = window.omnidl.onDownloadBatchPeek((p) => {
+      setBatchPeekTitle(p.title);
+      if (batchPeekTimerRef.current != null) window.clearTimeout(batchPeekTimerRef.current);
+      batchPeekTimerRef.current = window.setTimeout(() => {
+        setBatchPeekTitle(null);
+        batchPeekTimerRef.current = null;
+      }, 2000);
+    });
+    return () => {
+      off();
+      if (batchPeekTimerRef.current != null) window.clearTimeout(batchPeekTimerRef.current);
     };
   }, []);
 
@@ -156,8 +176,6 @@ export default function App() {
       <DuplicateFileModal
         open={dupAsk != null}
         predictedPath={dupAsk?.predictedPath ?? ""}
-        historyHit={dupAsk?.historyHit ?? false}
-        fileExists={dupAsk?.fileExists ?? false}
         onRedownload={() => {
           if (dupAsk) {
             window.omnidl.duplicateRespond({ jobId: dupAsk.jobId, choice: "redownload" });
@@ -188,9 +206,15 @@ export default function App() {
         onOpenFolder={() => {
           if (downloadDone?.path) void window.omnidl.showItemInFolder(downloadDone.path);
         }}
+        onOpenDownloadsFolder={() => {
+          if (batchDoneOutputDir) {
+            void window.omnidl.openPath(batchDoneOutputDir);
+          }
+        }}
         onDone={() => {
           setDownloadDone(null);
           setBatchDoneCount(null);
+          setBatchDoneOutputDir(null);
         }}
       />
       <TransitionOverlay active={overlayOn} sweep={sweep} label={transitionLabel} />
@@ -202,11 +226,36 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 6 }}
             transition={{ duration: 0.2 }}
-            className="pointer-events-none fixed bottom-6 left-1/2 z-[220] max-w-[90vw] -translate-x-1/2 border-4 border-[#111] bg-[#ffe66d] px-4 py-2.5 text-center text-xs font-black uppercase tracking-wide text-[#111] shadow-[6px_6px_0_0_#111]"
+            className="pointer-events-none fixed bottom-6 right-6 z-[220] max-w-[min(92vw,420px)] border-4 border-[#111] bg-[#86efac] px-4 py-2.5 text-right text-xs font-black uppercase tracking-wide text-[#111] shadow-[6px_6px_0_0_#111]"
             role="status"
           >
             {settingsSavedNotice}
           </motion.div>
+        ) : null}
+      </AnimatePresence>
+      <AnimatePresence>
+        {batchPeekTitle ? (
+          <motion.button
+            type="button"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => {
+              setBatchPeekTitle(null);
+              if (batchPeekTimerRef.current != null) {
+                window.clearTimeout(batchPeekTimerRef.current);
+                batchPeekTimerRef.current = null;
+              }
+            }}
+            className="fixed bottom-6 right-6 z-[190] max-w-[min(92vw,420px)] cursor-pointer border-4 border-[#111] bg-[#bbf7d0] px-4 py-2.5 text-left shadow-[6px_6px_0_0_#111]"
+            role="status"
+          >
+            <span className="block text-[10px] font-black uppercase tracking-wide text-neutral-500">
+              Downloaded
+            </span>
+            <span className="mt-0.5 line-clamp-2 text-xs font-bold text-[#111]">{batchPeekTitle}</span>
+          </motion.button>
         ) : null}
       </AnimatePresence>
 
@@ -279,13 +328,13 @@ export default function App() {
               {tabs.find((x) => x.id === tab)?.label ?? tab}
             </h1>
             <span className="text-xs font-bold text-neutral-500">
-              {tab === "home" && "Paste link · Fetch · pick quality"}
-              {tab === "search" && "YouTube search · Fetch on Home · open in browser"}
-              {tab === "queue" && "Downloads · pause / cancel"}
-              {tab === "playlist" && "Playlist · batch enqueue"}
-              {tab === "history" && "Completed · open folder"}
-              {tab === "options" && "Clipboard · updates · disclaimer"}
-              {tab === "instruction" && "Errors · queue · formats"}
+              {tab === "home" && "URL · fetch · quality"}
+              {tab === "search" && "Search · open on Home"}
+              {tab === "queue" && "Active downloads"}
+              {tab === "playlist" && "Playlist · enqueue"}
+              {tab === "history" && "Past downloads"}
+              {tab === "options" && "Settings"}
+              {tab === "instruction" && "How to"}
             </span>
           </div>
         </div>
