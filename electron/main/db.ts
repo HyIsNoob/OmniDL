@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import initSqlJs, { type Database } from "sql.js";
 import { fileURLToPath } from "node:url";
+import { normalizeVideoUrl } from "./url.js";
 
 let db: Database | null = null;
 let dbPath = "";
@@ -73,6 +74,17 @@ function getDb(): Database {
   return db;
 }
 
+export async function closeDatabase(): Promise<void> {
+  if (db) {
+    try {
+      db.close();
+    } catch {
+      /* ignore */
+    }
+    db = null;
+  }
+}
+
 export function settingsGet(key: string): string | null {
   const d = getDb();
   const stmt = d.prepare("SELECT value FROM settings WHERE key = ?");
@@ -135,6 +147,67 @@ export function historyList(): Array<{
   return out;
 }
 
+export function historyCount(): number {
+  const stmt = getDb().prepare("SELECT COUNT(*) AS c FROM history");
+  if (!stmt.step()) {
+    stmt.free();
+    return 0;
+  }
+  const r = stmt.getAsObject() as { c?: number };
+  stmt.free();
+  return Number(r.c ?? 0);
+}
+
+export function historyListPaged(
+  offset: number,
+  limit: number,
+): Array<{
+  id: string;
+  url: string;
+  title: string;
+  platform: string;
+  mediaPath: string;
+  quality: string;
+  kind: string;
+  createdAt: number;
+  thumbnailPath: string | null;
+}> {
+  const d = getDb();
+  const lim = Math.min(500, Math.max(1, limit));
+  const off = Math.max(0, offset);
+  const stmt = d.prepare(
+    "SELECT id, url, title, platform, media_path, quality, kind, created_at, thumbnail_path FROM history ORDER BY created_at DESC LIMIT ? OFFSET ?",
+  );
+  stmt.bind([lim, off]);
+  const out: Array<{
+    id: string;
+    url: string;
+    title: string;
+    platform: string;
+    mediaPath: string;
+    quality: string;
+    kind: string;
+    createdAt: number;
+    thumbnailPath: string | null;
+  }> = [];
+  while (stmt.step()) {
+    const r = stmt.getAsObject() as Record<string, unknown>;
+    out.push({
+      id: String(r.id),
+      url: String(r.url),
+      title: String(r.title ?? ""),
+      platform: String(r.platform ?? ""),
+      mediaPath: String(r.media_path),
+      quality: String(r.quality ?? ""),
+      kind: String(r.kind),
+      createdAt: Number(r.created_at),
+      thumbnailPath: r.thumbnail_path != null ? String(r.thumbnail_path) : null,
+    });
+  }
+  stmt.free();
+  return out;
+}
+
 export function historyAdd(row: {
   id: string;
   url: string;
@@ -146,12 +219,13 @@ export function historyAdd(row: {
   createdAt: number;
   thumbnailPath: string | null;
 }): void {
+  const urlNorm = normalizeVideoUrl(row.url);
   getDb().run(
     `INSERT OR REPLACE INTO history (id, url, title, platform, media_path, quality, kind, created_at, thumbnail_path)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       row.id,
-      row.url,
+      urlNorm,
       row.title,
       row.platform,
       row.mediaPath,
@@ -175,24 +249,56 @@ export function historyClear(): void {
 }
 
 export function historyUrlExists(url: string, kind: string): boolean {
-  const stmt = getDb().prepare("SELECT 1 FROM history WHERE url = ? AND kind = ? LIMIT 1");
-  stmt.bind([url, kind]);
-  const ok = stmt.step();
+  const want = normalizeVideoUrl(url);
+  const stmt = getDb().prepare("SELECT url FROM history WHERE kind = ?");
+  stmt.bind([kind]);
+  while (stmt.step()) {
+    const r = stmt.getAsObject() as { url?: string };
+    const u = typeof r.url === "string" ? r.url : "";
+    if (normalizeVideoUrl(u) === want) {
+      stmt.free();
+      return true;
+    }
+  }
   stmt.free();
-  return ok;
+  return false;
 }
 
 export function historyGetMediaPathByUrl(url: string, kind: string): string | null {
+  const want = normalizeVideoUrl(url);
   const stmt = getDb().prepare(
-    "SELECT media_path FROM history WHERE url = ? AND kind = ? ORDER BY created_at DESC LIMIT 1",
+    "SELECT media_path, url FROM history WHERE kind = ? ORDER BY created_at DESC",
   );
-  stmt.bind([url, kind]);
-  if (!stmt.step()) {
-    stmt.free();
-    return null;
+  stmt.bind([kind]);
+  while (stmt.step()) {
+    const r = stmt.getAsObject() as { media_path?: string; url?: string };
+    const u = typeof r.url === "string" ? r.url : "";
+    if (normalizeVideoUrl(u) === want) {
+      const p = r.media_path;
+      stmt.free();
+      return typeof p === "string" && p.length > 0 ? p : null;
+    }
   }
-  const row = stmt.getAsObject() as { media_path?: string };
   stmt.free();
-  const p = row.media_path;
-  return typeof p === "string" && p.length > 0 ? p : null;
+  return null;
+}
+
+export function historyGetExistingMediaPathByUrl(url: string, kind: string): string | null {
+  const want = normalizeVideoUrl(url);
+  const stmt = getDb().prepare(
+    "SELECT media_path, url FROM history WHERE kind = ? ORDER BY created_at DESC",
+  );
+  stmt.bind([kind]);
+  while (stmt.step()) {
+    const r = stmt.getAsObject() as { media_path?: string; url?: string };
+    const u = typeof r.url === "string" ? r.url : "";
+    if (normalizeVideoUrl(u) !== want) continue;
+    const p = typeof r.media_path === "string" ? r.media_path : "";
+    if (p && existsSync(p)) {
+      stmt.free();
+      return p;
+    }
+  }
+  stmt.free();
+  return null;
 }

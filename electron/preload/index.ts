@@ -7,16 +7,30 @@ import type {
   QueueJob,
   QueueState,
   VideoInfoPayload,
+  YoutubeSearchResult,
 } from "../../shared/ipc.js";
 
 const api = {
   getVersion: () => ipcRenderer.invoke("app:getVersion") as Promise<string>,
+  getUserDataPath: () => ipcRenderer.invoke("app:getUserDataPath") as Promise<string>,
+  getDataPathInfo: () =>
+    ipcRenderer.invoke("app:getDataPathInfo") as Promise<{
+      activePath: string;
+      portableTargetPath: string;
+      portableActive: boolean;
+    }>,
+  getStorageStats: () =>
+    ipcRenderer.invoke("app:getStorageStats") as Promise<{ cleanable: number; total: number }>,
+  openUserDataFolder: () => ipcRenderer.invoke("app:openUserDataFolder") as Promise<void>,
+  clearCleanableAppData: () => ipcRenderer.invoke("app:clearCleanableData") as Promise<void>,
   pathsDownloads: () => ipcRenderer.invoke("paths:downloads") as Promise<string>,
   normalizeUrl: (url: string) => ipcRenderer.invoke("url:normalize", url) as Promise<string>,
   ytdlpGetVersion: () => ipcRenderer.invoke("ytdlp:getVersion") as Promise<string | null>,
   ytdlpGetRemoteTag: () => ipcRenderer.invoke("ytdlp:getRemoteTag") as Promise<string>,
   ytdlpEnsure: () => ipcRenderer.invoke("ytdlp:ensure") as Promise<string | null>,
   fetchVideo: (url: string) => ipcRenderer.invoke("yt:fetchVideo", url) as Promise<VideoInfoPayload>,
+  searchYoutube: (query: string, limit: number) =>
+    ipcRenderer.invoke("yt:search", { query, limit }) as Promise<YoutubeSearchResult[]>,
   fetchPlaylist: (url: string, limit: number) =>
     ipcRenderer.invoke("yt:fetchPlaylist", { url, limit }) as Promise<PlaylistInfoPayload>,
   fetchVideoThumb: (url: string) =>
@@ -64,6 +78,11 @@ const api = {
   settingsGet: (key: string) => ipcRenderer.invoke("settings:get", key) as Promise<string | null>,
   settingsSet: (key: string, value: string) => ipcRenderer.invoke("settings:set", key, value),
   historyList: () => ipcRenderer.invoke("history:list") as Promise<HistoryRow[]>,
+  historyListPaged: (offset: number, limit: number) =>
+    ipcRenderer.invoke("history:listPaged", { offset, limit }) as Promise<{
+      rows: HistoryRow[];
+      total: number;
+    }>,
   historyRemove: (id: string) => ipcRenderer.invoke("history:remove", id),
   historyClear: () => ipcRenderer.invoke("history:clear"),
   readImageDataUrl: (filePath: string) =>
@@ -71,6 +90,7 @@ const api = {
   openDirectory: () => ipcRenderer.invoke("dialog:openDirectory") as Promise<string | null>,
   showItemInFolder: (p: string) => ipcRenderer.invoke("shell:showItemInFolder", p),
   openPath: (p: string) => ipcRenderer.invoke("shell:openPath", p),
+  openExternalUrl: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
   readClipboard: () => ipcRenderer.invoke("clipboard:read") as Promise<string>,
   updaterCheck: () => ipcRenderer.invoke("updater:check") as Promise<{ version: string | null }>,
   updaterDownload: () => ipcRenderer.invoke("updater:download"),
@@ -84,6 +104,11 @@ const api = {
     const fn = (_: unknown, p: { title: string; path: string }) => cb(p);
     ipcRenderer.on("download:done", fn);
     return () => ipcRenderer.removeListener("download:done", fn);
+  },
+  onDownloadBatchDone: (cb: (p: { count: number }) => void) => {
+    const fn = (_: unknown, p: { count: number }) => cb(p);
+    ipcRenderer.on("download:batchDone", fn);
+    return () => ipcRenderer.removeListener("download:batchDone", fn);
   },
   onDuplicateAsk: (cb: (p: DuplicateAskPayload) => void) => {
     const fn = (_: unknown, p: DuplicateAskPayload) => cb(p);

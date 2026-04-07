@@ -1,12 +1,25 @@
 import { app, clipboard, dialog, ipcMain, shell } from "electron";
+import { getPortableTargetPath, isUsingPortableDataPath } from "./user-data-path.js";
+import {
+  clearCleanableAppStorage,
+  getAppStorageStats,
+  openUserDataFolder,
+} from "./app-storage.js";
 import { downloadThumbnail, sanitizeThumbFileName } from "./thumbnail.js";
 import { autoUpdater } from "./updater.js";
 import { existsSync, readFileSync, unlinkSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import { buildPlaylistPayload, buildVideoPayload, thumbnailFromVideoJson } from "./formats.js";
+import {
+  buildPlaylistPayload,
+  buildSearchResults,
+  buildVideoPayload,
+  thumbnailFromVideoJson,
+} from "./formats.js";
 import {
   historyClear,
+  historyCount,
   historyList,
+  historyListPaged,
   historyRemove,
   settingsGet,
   settingsSet,
@@ -33,6 +46,19 @@ import type { DuplicateChoice, HistoryRow } from "../../shared/ipc.js";
 
 export function registerIpc(isDev: boolean): void {
   ipcMain.handle("app:getVersion", () => app.getVersion());
+  ipcMain.handle("app:getUserDataPath", () => app.getPath("userData"));
+  ipcMain.handle("app:getDataPathInfo", () => ({
+    activePath: app.getPath("userData"),
+    portableTargetPath: getPortableTargetPath(),
+    portableActive: isUsingPortableDataPath(),
+  }));
+  ipcMain.handle("app:getStorageStats", () => getAppStorageStats());
+  ipcMain.handle("app:openUserDataFolder", () => {
+    openUserDataFolder();
+  });
+  ipcMain.handle("app:clearCleanableData", async (event) => {
+    await clearCleanableAppStorage(event.sender);
+  });
   ipcMain.handle("paths:downloads", () => app.getPath("downloads"));
 
   ipcMain.handle("url:normalize", (_e, url: string) => normalizeVideoUrl(url));
@@ -53,6 +79,18 @@ export function registerIpc(isDev: boolean): void {
     );
     if (code !== 0) throw new Error(formatYtdlpUserMessage(stderr, code));
     return buildVideoPayload(stdout);
+  });
+
+  ipcMain.handle("yt:search", async (_e, payload: { query: string; limit: number }) => {
+    const q = payload.query.trim();
+    if (!q) throw new Error("Empty query");
+    const lim = Math.min(15, Math.max(1, payload.limit || 10));
+    const { stdout, stderr, code } = await runYtdlp(
+      ["-J", "--flat-playlist", "--playlist-end", String(lim), "--no-warnings", `ytsearch${lim}:${q}`],
+      { maxBuffer: 40 * 1024 * 1024 },
+    );
+    if (code !== 0) throw new Error(formatYtdlpUserMessage(stderr, code));
+    return buildSearchResults(stdout);
   });
 
   ipcMain.handle(
@@ -189,6 +227,28 @@ export function registerIpc(isDev: boolean): void {
       thumbnailPath: h.thumbnailPath,
     }));
   });
+  ipcMain.handle(
+    "history:listPaged",
+    (_e, payload: { offset: number; limit: number }): { rows: HistoryRow[]; total: number } => {
+      const offset = Math.max(0, payload?.offset ?? 0);
+      const limit = Math.min(500, Math.max(1, payload?.limit ?? 10));
+      const total = historyCount();
+      const raw = historyListPaged(offset, limit);
+      const rows = raw.map((h) => ({
+        id: h.id,
+        url: h.url,
+        title: h.title,
+        platform: h.platform,
+        mediaPath: h.mediaPath,
+        quality: h.quality,
+        kind: h.kind as "video" | "audio",
+        createdAt: h.createdAt,
+        exists: existsSync(h.mediaPath),
+        thumbnailPath: h.thumbnailPath,
+      }));
+      return { rows, total };
+    },
+  );
   ipcMain.handle("history:remove", (_e, id: string) => {
     const row = historyList().find((r) => r.id === id);
     if (row?.thumbnailPath && existsSync(row.thumbnailPath)) {
@@ -238,6 +298,13 @@ export function registerIpc(isDev: boolean): void {
     shell.showItemInFolder(p);
   });
   ipcMain.handle("shell:openPath", (_e, p: string) => shell.openPath(p));
+  ipcMain.handle("shell:openExternal", (_e, url: string) => {
+    const u = String(url).trim();
+    if (!u.startsWith("http://") && !u.startsWith("https://")) {
+      throw new Error("Invalid URL");
+    }
+    return shell.openExternal(u);
+  });
 
   ipcMain.handle("clipboard:read", () => clipboard.readText());
 

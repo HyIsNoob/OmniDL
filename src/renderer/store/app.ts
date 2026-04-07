@@ -5,6 +5,7 @@ import { useSettingsStore } from "./settingsUi";
 
 const TAB_ORDER: TabId[] = [
   "home",
+  "search",
   "queue",
   "playlist",
   "history",
@@ -18,6 +19,7 @@ function tabIndex(t: TabId): number {
 
 export const TAB_TRANSITION_LABEL: Record<TabId, string> = {
   home: "HOME",
+  search: "SEARCH",
   queue: "QUEUE",
   playlist: "PLAYLIST",
   history: "HISTORY",

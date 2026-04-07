@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 export function DuplicateFileModal({
   open,
   predictedPath,
@@ -15,6 +17,15 @@ export function DuplicateFileModal({
   onOpenFolder: () => void;
   onCancel: () => void;
 }) {
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [open, onCancel]);
+
   if (!open) return null;
   return (
     <div
@@ -22,8 +33,14 @@ export function DuplicateFileModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="dup-file-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCancel();
+      }}
     >
-      <div className="w-full max-w-md border-4 border-[#111] bg-[#fffef8] p-5 shadow-[8px_8px_0_0_#111]">
+      <div
+        className="w-full max-w-md border-4 border-[#111] bg-[#fffef8] p-5 shadow-[8px_8px_0_0_#111]"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-start justify-between gap-3">
           <h2
             id="dup-file-title"

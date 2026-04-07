@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Download, FolderOpen, Layers, Link2, Loader2, Music, Video } from "lucide-react";
-import type { FormatOption, QueueJob } from "@shared/ipc";
+import type { FormatOption, QueueJob, QueueState } from "@shared/ipc";
 import { formatBytes, formatDuration } from "../lib/format";
+import { useAppStore } from "../store/app";
+import { useHomeUrlStore } from "../store/homeUrl";
 import { useSettingsStore } from "../store/settingsUi";
 import { useHomeFetchUiStore } from "../store/homeFetchUi";
 import { useSessionFetchStore } from "../store/sessionFetch";
@@ -112,6 +114,34 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
   const [outDir, setOutDir] = useState<string>("");
   const [trackedJob, setTrackedJob] = useState<QueueJob | null>(null);
   const [quickHint, setQuickHint] = useState<string | null>(null);
+  const tab = useAppStore((s) => s.tab);
+  const setTab = useAppStore((s) => s.setTab);
+
+  const [queueState, setQueueState] = useState<QueueState | null>(null);
+  const [historyTotal, setHistoryTotal] = useState<number | null>(null);
+
+  const queueActiveCount = useMemo(() => {
+    if (!queueState?.jobs.length) return 0;
+    return queueState.jobs.filter(
+      (j) => j.status === "pending" || j.status === "downloading" || j.status === "paused",
+    ).length;
+  }, [queueState]);
+
+  const queueJobCount = queueState?.jobs.length ?? 0;
+
+  useEffect(() => {
+    void window.omnidl.queueGetState().then(setQueueState);
+    const off = window.omnidl.onQueueUpdate(setQueueState);
+    return () => {
+      off();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!info) {
+      void window.omnidl.historyListPaged(0, 1).then((r) => setHistoryTotal(r.total));
+    }
+  }, [info]);
 
   const flashHint = useCallback((msg: string) => {
     setQuickHint(msg);
@@ -188,17 +218,21 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
   }, []);
 
   const fetchNow = useCallback(
-    async (opts?: { silent?: boolean }) => {
+    async (opts?: { silent?: boolean; overrideUrl?: string }) => {
       const silent = opts?.silent ?? false;
       setErr(null);
-      const normalized = await window.omnidl.normalizeUrl(url.trim());
-      const u = normalized || url.trim();
+      const raw = (opts?.overrideUrl ?? url).trim();
+      const normalized = await window.omnidl.normalizeUrl(raw);
+      const u = normalized || raw;
       if (silent) {
         const st = useSessionFetchStore.getState();
         if (st.homeFetchedUrl === u && st.homeVideo) return;
       }
       if (!silent) {
         clearHomeSession();
+      }
+      if (opts?.overrideUrl) {
+        setUrl(u);
       }
       setFetching();
       try {
@@ -222,6 +256,7 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
     },
     [
       url,
+      setUrl,
       setFetching,
       setFetchSuccess,
       setFetchError,
@@ -230,6 +265,13 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
       setHomeSession,
     ],
   );
+
+  useEffect(() => {
+    if (tab !== "home") return;
+    const h = useHomeUrlStore.getState().takeFetchHandoff();
+    if (!h) return;
+    void fetchNow({ silent: false, overrideUrl: h });
+  }, [tab, fetchNow]);
 
   useEffect(() => {
     if (!autoFetch) return;
@@ -712,6 +754,68 @@ export function Home({ url, setUrl }: { url: string; setUrl: (s: string) => void
                 </motion.div>
               </BrutalPanel>
             </motion.div>
+          </motion.div>
+        ) : !fetchInFlight ? (
+          <motion.div
+            key="home-empty-dashboard"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10, transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] } }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            className="space-y-5"
+          >
+            <BrutalPanel className="p-5">
+              <div className="text-sm font-black uppercase tracking-wide">Home overview</div>
+              <p className="mt-2 text-xs font-semibold text-neutral-600">
+                Paste a link above, then Fetch. This panel hides while loading and after a video is ready to
+                download.
+              </p>
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="border-4 border-[#111] bg-white p-4 text-center">
+                  <div className="text-[10px] font-black uppercase text-neutral-500">Active in queue</div>
+                  <div className="mt-2 font-mono text-3xl font-black tabular-nums">{queueActiveCount}</div>
+                </div>
+                <div className="border-4 border-[#111] bg-white p-4 text-center">
+                  <div className="text-[10px] font-black uppercase text-neutral-500">Jobs in queue</div>
+                  <div className="mt-2 font-mono text-3xl font-black tabular-nums">{queueJobCount}</div>
+                </div>
+                <div className="border-4 border-[#111] bg-white p-4 text-center">
+                  <div className="text-[10px] font-black uppercase text-neutral-500">History rows</div>
+                  <div className="mt-2 font-mono text-3xl font-black tabular-nums">
+                    {historyTotal != null ? historyTotal : "—"}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <motion.button
+                  type="button"
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setTab("search")}
+                  className={`border-4 border-[#111] bg-[#a29bfe] px-4 py-3 text-center text-xs font-black uppercase shadow-[4px_4px_0_0_#111] ${btnMotion}`}
+                >
+                  Search YouTube
+                </motion.button>
+                <motion.button
+                  type="button"
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setTab("queue")}
+                  className={`border-4 border-[#111] bg-[#4ecdc4] px-4 py-3 text-center text-xs font-black uppercase shadow-[4px_4px_0_0_#111] ${btnMotion}`}
+                >
+                  Open queue
+                </motion.button>
+                <motion.button
+                  type="button"
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setTab("playlist")}
+                  className={`border-4 border-[#111] bg-[#fab1a0] px-4 py-3 text-center text-xs font-black uppercase shadow-[4px_4px_0_0_#111] ${btnMotion}`}
+                >
+                  Playlist
+                </motion.button>
+              </div>
+            </BrutalPanel>
           </motion.div>
         ) : null}
       </AnimatePresence>

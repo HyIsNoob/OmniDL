@@ -1,10 +1,22 @@
 export type TabId =
   | "home"
+  | "search"
   | "queue"
   | "playlist"
   | "history"
   | "options"
   | "instruction";
+
+export interface YoutubeSearchResult {
+  title: string;
+  url: string;
+  thumbnail: string | null;
+  duration: number | null;
+  viewCount: number | null;
+  uploader: string | null;
+  channel: string | null;
+  description: string | null;
+}
 
 export type DuplicateChoice = "redownload" | "open" | "cancel";
 

@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-03-27
+
+### Added
+
+- **Search** tab: YouTube search by keyword, grid with thumbnails and metadata; **Fetch on Home** and **Watch in browser**.
+- **Home** empty state: **Home overview** dashboard (queue and history counts, shortcuts to Search / Queue / Playlist); fades out while fetching and when video metadata is shown.
+- **Playlist**: confirm before enqueue; success modal with **Open queue**.
+- **History**: server-side paging with **Load more**.
+- **Options**: queue concurrency (1–3); batch notification threshold (default **5**); **Settings saved** toast; app data cleanup (cache, DB, thumbnails, Chromium caches) with **Open folder**; storage size (cleanable vs total); optional **portable data** folder `omnidl-data` next to the executable when writable, with one-time migration from Roaming.
+- **IPC**: `shell:openExternal`, storage stats, data path info, portable migration.
+
+### Changed
+
+- **Queue**: display order (active first); parallel downloads up to concurrency; batch completion notifications when the queue is long; duplicate prompt only when a **file still exists** on disk (stale history ignored).
+- **URLs**: normalize YouTube (and related) URLs for history and duplicate checks.
+- **Branding**: sidebar logo uses **Download** icon; Search tab uses search icon.
+
+### Fixed
+
+- **Duplicate modal**: Esc, backdrop, and close paths always resolve the IPC wait so the queue cannot stall.
+
 ## [1.5.1] - 2026-04-01
 
 ### Fixed

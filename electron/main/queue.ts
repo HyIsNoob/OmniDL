@@ -5,10 +5,10 @@ import { Notification, app, shell, type BrowserWindow } from "electron";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import {
   historyAdd,
-  historyGetMediaPathByUrl,
-  historyUrlExists,
+  historyGetExistingMediaPathByUrl,
   settingsGet,
 } from "./db.js";
+import { normalizeVideoUrl } from "./url.js";
 import { downloadThumbnail } from "./thumbnail.js";
 import { formatYtdlpUserMessage } from "./ytdlp-errors.js";
 import { runYtdlp, runYtdlpDownload, type DownloadProgress } from "./ytdlp.js";
@@ -23,9 +23,34 @@ function shouldShowOsPush(): boolean {
   return settingsGet("notificationsPush") !== "0";
 }
 
+function getNotifyBatchThreshold(): number {
+  const v = settingsGet("notifyBatchThreshold");
+  if (v == null || v === "") return 5;
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) && n >= 0 ? n : 5;
+}
+
+function getMaxConcurrency(): number {
+  const v = settingsGet("queueConcurrency");
+  const n = v == null || v === "" ? 1 : parseInt(v, 10);
+  if (!Number.isFinite(n)) return 1;
+  return Math.min(3, Math.max(1, n));
+}
+
+let completionBatchCount = 0;
+
+let duplicateMutex = Promise.resolve();
+
+async function withDuplicateLock<T>(fn: () => Promise<T>): Promise<T> {
+  const run = duplicateMutex.then(() => fn());
+  duplicateMutex = run.then(() => {}).catch(() => {});
+  return run;
+}
+
 let targetWindow: BrowserWindow | null = null;
 const jobs: QueueJob[] = [];
-let activeChild: ChildProcessWithoutNullStreams | null = null;
+const activeChildren = new Map<string, ChildProcessWithoutNullStreams>();
+const pendingClaimed = new Set<string>();
 let pumpBusy = false;
 
 export function setQueueWindow(win: BrowserWindow | null): void {
@@ -33,7 +58,18 @@ export function setQueueWindow(win: BrowserWindow | null): void {
 }
 
 function sortedJobs(): QueueJob[] {
-  return [...jobs].sort((a, b) => b.createdAt - a.createdAt);
+  return [...jobs].sort((a, b) => {
+    const tier = (j: QueueJob): number => {
+      if (j.status === "downloading") return 0;
+      if (j.status === "pending" || j.status === "paused") return 1;
+      return 2;
+    };
+    const ta = tier(a);
+    const tb = tier(b);
+    if (ta !== tb) return ta - tb;
+    if (ta <= 1) return a.createdAt - b.createdAt;
+    return b.createdAt - a.createdAt;
+  });
 }
 
 function pushState(): void {
@@ -136,14 +172,14 @@ async function predictOutputPath(job: QueueJob): Promise<string | null> {
 
 async function resolveDuplicate(job: QueueJob): Promise<"proceed" | "skip" | "abort"> {
   const predicted = await predictOutputPath(job);
-  const hist = historyUrlExists(job.url, job.kind);
-  const fileExists = predicted != null && existsSync(predicted);
-  if (!hist && !fileExists) return "proceed";
+  const historyPath = historyGetExistingMediaPathByUrl(job.url, job.kind);
+  const predictedExists = predicted != null && existsSync(predicted);
+  if (!historyPath && !predictedExists) return "proceed";
 
   const openTarget =
-    fileExists && predicted
+    predictedExists && predicted
       ? predicted
-      : historyGetMediaPathByUrl(job.url, job.kind) ?? (predicted ?? undefined);
+      : historyPath ?? (predicted ?? undefined);
 
   if (!targetWindow || targetWindow.isDestroyed()) {
     return "abort";
@@ -154,8 +190,8 @@ async function resolveDuplicate(job: QueueJob): Promise<"proceed" | "skip" | "ab
     targetWindow!.webContents.send("duplicate:ask", {
       jobId: job.id,
       predictedPath: predicted ?? "",
-      historyHit: hist,
-      fileExists,
+      historyHit: historyPath != null,
+      fileExists: predictedExists,
     });
   });
 
@@ -213,109 +249,143 @@ function cleanupYtdlpSidecars(outPath: string): void {
 
 async function runJob(job: QueueJob): Promise<void> {
   if (!jobs.includes(job)) return;
-  const dup = await resolveDuplicate(job);
-  if (!jobs.includes(job)) return;
-  if (dup === "abort") {
-    job.status = "error";
-    job.error = "Cancelled";
-    removeJobFromQueue(job);
-    pushState();
-    void pump();
-    return;
-  }
-  if (dup === "skip") {
-    removeJobFromQueue(job);
-    pushState();
-    void pump();
-    return;
-  }
-
-  job.status = "downloading";
-  job.progress = 0;
-  job.speed = undefined;
-  job.eta = undefined;
-  pushState();
-  const args = buildArgs(job);
-  const { child, promise } = runYtdlpDownload(args, {
-    onProgress: (p: DownloadProgress) => {
-      job.progress = p.percent;
-      job.speed = p.speed;
-      job.eta = p.eta;
-      pushState();
-    },
-  });
-  activeChild = child;
+  if (job.status !== "pending") return;
+  if (pendingClaimed.has(job.id)) return;
+  pendingClaimed.add(job.id);
   try {
-    const { code, stderr } = await promise;
-    if (!jobs.includes(job)) {
-      void pump();
-      return;
-    }
-    if (job.status === "cancelled") return;
-    if (job.status === "paused") return;
-    if (code !== 0) {
+    const dup = await withDuplicateLock(() => resolveDuplicate(job));
+    if (!jobs.includes(job)) return;
+    if (dup === "abort") {
       job.status = "error";
-      job.error = formatYtdlpUserMessage(stderr, code);
-      job.progress = 0;
+      job.error = "Cancelled";
+      removeJobFromQueue(job);
       pushState();
       return;
     }
-    job.status = "completed";
-    job.progress = 100;
-    const outPath = findOutputPath(stderr);
-    if (outPath && existsSync(outPath)) {
-      job.outputPath = outPath;
-      cleanupYtdlpSidecars(outPath);
-    } else {
-      job.outputPath = job.outputDir;
+    if (dup === "skip") {
+      removeJobFromQueue(job);
+      pushState();
+      return;
     }
-    const recordId = randomUUID();
-    let thumbnailPath: string | null = null;
-    if (job.kind === "video" && job.thumbnailUrl) {
-      const dest = join(app.getPath("userData"), "thumbnails", `${recordId}.jpg`);
-      const ok = await downloadThumbnail(job.thumbnailUrl, dest);
-      if (ok && existsSync(dest)) {
-        thumbnailPath = dest;
-      }
-    }
-    historyAdd({
-      id: recordId,
-      url: job.url,
-      title: job.title,
-      platform: job.platform ?? "unknown",
-      mediaPath: job.outputPath ?? job.outputDir,
-      quality: job.formatLabel,
-      kind: job.kind,
-      createdAt: Date.now(),
-      thumbnailPath,
-    });
-    if (shouldShowOsPush() && Notification.isSupported()) {
-      new Notification({ title: "Download complete", body: job.title }).show();
-    }
-    if (targetWindow && !targetWindow.isDestroyed()) {
-      targetWindow.webContents.send("download:done", {
-        title: job.title,
-        path: job.outputPath ?? job.outputDir,
-      });
-    }
+
+    job.status = "downloading";
+    job.progress = 0;
+    job.speed = undefined;
+    job.eta = undefined;
     pushState();
+    const args = buildArgs(job);
+    const { child, promise } = runYtdlpDownload(args, {
+      onProgress: (p: DownloadProgress) => {
+        job.progress = p.percent;
+        job.speed = p.speed;
+        job.eta = p.eta;
+        pushState();
+      },
+    });
+    activeChildren.set(job.id, child);
+    try {
+      const { code, stderr } = await promise;
+      if (!jobs.includes(job)) {
+        return;
+      }
+      if (job.status === "cancelled") return;
+      if (job.status === "paused") return;
+      if (code !== 0) {
+        job.status = "error";
+        job.error = formatYtdlpUserMessage(stderr, code);
+        job.progress = 0;
+        pushState();
+        return;
+      }
+      job.status = "completed";
+      job.progress = 100;
+      const outPath = findOutputPath(stderr);
+      if (outPath && existsSync(outPath)) {
+        job.outputPath = outPath;
+        cleanupYtdlpSidecars(outPath);
+      } else {
+        job.outputPath = job.outputDir;
+      }
+      const recordId = randomUUID();
+      let thumbnailPath: string | null = null;
+      if (job.kind === "video" && job.thumbnailUrl) {
+        const dest = join(app.getPath("userData"), "thumbnails", `${recordId}.jpg`);
+        const ok = await downloadThumbnail(job.thumbnailUrl, dest);
+        if (ok && existsSync(dest)) {
+          thumbnailPath = dest;
+        }
+      }
+      historyAdd({
+        id: recordId,
+        url: job.url,
+        title: job.title,
+        platform: job.platform ?? "unknown",
+        mediaPath: job.outputPath ?? job.outputDir,
+        quality: job.formatLabel,
+        kind: job.kind,
+        createdAt: Date.now(),
+        thumbnailPath,
+      });
+      const T = getNotifyBatchThreshold();
+      const remainingActive = jobs.filter(
+        (j) => j.status === "pending" || j.status === "downloading" || j.status === "paused",
+      ).length;
+      const totalJobs = jobs.length;
+      if (T > 0 && totalJobs > T) {
+        if (remainingActive > 0) {
+          completionBatchCount++;
+        } else {
+          completionBatchCount++;
+          const cnt = completionBatchCount;
+          completionBatchCount = 0;
+          if (shouldShowOsPush() && Notification.isSupported()) {
+            new Notification({
+              title: "Downloads complete",
+              body: `${cnt} item(s) finished`,
+            }).show();
+          }
+          if (targetWindow && !targetWindow.isDestroyed()) {
+            targetWindow.webContents.send("download:batchDone", { count: cnt });
+          }
+        }
+      } else {
+        if (shouldShowOsPush() && Notification.isSupported()) {
+          new Notification({ title: "Download complete", body: job.title }).show();
+        }
+        if (targetWindow && !targetWindow.isDestroyed()) {
+          targetWindow.webContents.send("download:done", {
+            title: job.title,
+            path: job.outputPath ?? job.outputDir,
+          });
+        }
+      }
+      pushState();
+    } finally {
+      activeChildren.delete(job.id);
+    }
   } finally {
-    activeChild = null;
+    pendingClaimed.delete(job.id);
+    void pump();
   }
 }
 
 async function pump(): Promise<void> {
-  if (activeChild || pumpBusy) return;
+  if (pumpBusy) return;
   if (jobs.some((j) => j.status === "paused")) return;
-  const next = jobs.find((j) => j.status === "pending");
-  if (!next) return;
+  const max = getMaxConcurrency();
+  const running = jobs.filter((j) => j.status === "downloading").length;
+  const slots = max - running;
+  if (slots <= 0) return;
   pumpBusy = true;
   try {
-    await runJob(next);
+    for (let i = 0; i < slots; i++) {
+      const next = jobs.find((j) => j.status === "pending");
+      if (!next) break;
+      void runJob(next);
+    }
   } finally {
     pumpBusy = false;
   }
-  await pump();
 }
 
 export function getQueueState(): QueueState {
@@ -339,7 +409,7 @@ export function addJob(payload: {
   const id = randomUUID();
   const job: QueueJob = {
     id,
-    url: payload.url,
+    url: normalizeVideoUrl(payload.url.trim()),
     title: payload.title,
     formatLabel: payload.formatLabel,
     formatSelector: payload.formatSelector,
@@ -354,21 +424,19 @@ export function addJob(payload: {
     progress: 0,
   };
   job.outputTemplate = outputTemplateFor(job);
-  const active =
-    jobs.some((j) => j.status === "downloading") || pumpBusy;
-  if (!active) {
-    jobs.push(job);
-    void pump();
-    pushState();
-    return job;
-  }
+  const max = getMaxConcurrency();
+  const running = jobs.filter((j) => j.status === "downloading").length;
   if (payload.mode === "next") {
     const di = jobs.findIndex((j) => j.status === "downloading");
-    jobs.splice(di + 1, 0, job);
+    if (di >= 0) jobs.splice(di + 1, 0, job);
+    else jobs.push(job);
   } else {
     jobs.push(job);
   }
   pushState();
+  if (running < max) {
+    void pump();
+  }
   return job;
 }
 
@@ -376,8 +444,8 @@ export function pauseJob(id: string): void {
   const job = jobs.find((j) => j.id === id);
   if (!job || job.status !== "downloading") return;
   job.status = "paused";
-  activeChild?.kill();
-  activeChild = null;
+  activeChildren.get(id)?.kill();
+  activeChildren.delete(id);
   pushState();
 }
 
@@ -394,8 +462,8 @@ export function cancelJob(id: string): void {
   if (!job) return;
   if (job.status === "downloading") {
     job.status = "cancelled";
-    activeChild?.kill();
-    activeChild = null;
+    activeChildren.get(id)?.kill();
+    activeChildren.delete(id);
   } else {
     job.status = "cancelled";
   }
@@ -410,8 +478,8 @@ export function removeJob(id: string): void {
   if (!job) return;
   if (job.status === "downloading") {
     job.status = "cancelled";
-    activeChild?.kill();
-    activeChild = null;
+    activeChildren.get(id)?.kill();
+    activeChildren.delete(id);
   }
   removeJobFromQueue(job);
   void pump();

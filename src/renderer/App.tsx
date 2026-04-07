@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { History, Home, Layers, ListVideo, Settings } from "lucide-react";
+import { Download, History, Home, Layers, ListVideo, Search as SearchIcon, Settings } from "lucide-react";
 import { DownloadCompleteModal } from "./components/DownloadCompleteModal";
 import { DuplicateFileModal } from "./components/DuplicateFileModal";
 import { UpdateModal } from "./components/UpdateModal";
 import { TransitionOverlay } from "./components/TransitionOverlay";
 import { FetchLoadingOverlay } from "./components/FetchLoadingOverlay";
 import { Home as HomePage } from "./pages/Home";
+import { Search as SearchPage } from "./pages/Search";
 import { Queue } from "./pages/Queue";
 import { Playlist } from "./pages/Playlist";
 import { History as HistoryPage } from "./pages/History";
@@ -23,12 +24,14 @@ const tabs: Array<{
   id: TabId;
   label: string;
   Icon?: typeof Home;
+  glyph?: string;
 }> = [
   { id: "home", label: "Home", Icon: Home },
+  { id: "search", label: "Search", Icon: SearchIcon },
   { id: "queue", label: "Queue", Icon: Layers },
   { id: "playlist", label: "Playlist", Icon: ListVideo },
   { id: "history", label: "History", Icon: History },
-  { id: "instruction", label: "Instruction" },
+  { id: "instruction", label: "Instruction", glyph: "i" },
   { id: "options", label: "Options", Icon: Settings },
 ];
 
@@ -45,8 +48,10 @@ export default function App() {
   const clipboardWatch = useSettingsStore((s) => s.clipboardWatch);
   const animationFull = useSettingsStore((s) => s.animationLevel === "full");
   const hydrate = useSettingsStore((s) => s.hydrate);
+  const settingsSavedNotice = useSettingsStore((s) => s.settingsSavedNotice);
   const [appVersion, setAppVersion] = useState("");
   const [downloadDone, setDownloadDone] = useState<{ title: string; path: string } | null>(null);
+  const [batchDoneCount, setBatchDoneCount] = useState<number | null>(null);
   const [dupAsk, setDupAsk] = useState<DuplicateAskPayload | null>(null);
 
   useEffect(() => {
@@ -63,11 +68,17 @@ export default function App() {
   }, [clipboardWatch]);
 
   useEffect(() => {
-    const off = window.omnidl.onDownloadDone((p) => {
+    const offDone = window.omnidl.onDownloadDone((p) => {
+      setBatchDoneCount(null);
       setDownloadDone({ title: p.title, path: p.path });
     });
+    const offBatch = window.omnidl.onDownloadBatchDone((p) => {
+      setDownloadDone(null);
+      setBatchDoneCount(p.count);
+    });
     return () => {
-      off();
+      offDone();
+      offBatch();
     };
   }, []);
 
@@ -167,19 +178,37 @@ export default function App() {
         }}
       />
       <DownloadCompleteModal
-        open={downloadDone != null}
+        open={downloadDone != null || batchDoneCount != null}
         title={downloadDone?.title ?? ""}
         filePath={downloadDone?.path ?? ""}
+        batchCount={batchDoneCount}
         onPlay={() => {
           if (downloadDone?.path) void window.omnidl.openPath(downloadDone.path);
         }}
         onOpenFolder={() => {
           if (downloadDone?.path) void window.omnidl.showItemInFolder(downloadDone.path);
         }}
-        onDone={() => setDownloadDone(null)}
+        onDone={() => {
+          setDownloadDone(null);
+          setBatchDoneCount(null);
+        }}
       />
       <TransitionOverlay active={overlayOn} sweep={sweep} label={transitionLabel} />
       <FetchLoadingOverlay />
+      <AnimatePresence>
+        {settingsSavedNotice ? (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={{ duration: 0.2 }}
+            className="pointer-events-none fixed bottom-6 left-1/2 z-[220] max-w-[90vw] -translate-x-1/2 border-4 border-[#111] bg-[#ffe66d] px-4 py-2.5 text-center text-xs font-black uppercase tracking-wide text-[#111] shadow-[6px_6px_0_0_#111]"
+            role="status"
+          >
+            {settingsSavedNotice}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
       <aside className="relative z-10 flex w-[260px] shrink-0 flex-col border-r-4 border-[#111] bg-[#111] text-[#faf8f3] shadow-[6px_0_0_0_rgba(0,0,0,0.12)]">
@@ -191,7 +220,7 @@ export default function App() {
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
           >
             <div className="flex h-14 w-14 shrink-0 items-center justify-center border-4 border-[#faf8f3] bg-[#1c1c1c] shadow-[4px_4px_0_0_#faf8f3]">
-              <Layers className="h-8 w-8 text-[#faf8f3]" strokeWidth={2} aria-hidden />
+              <Download className="h-8 w-8 text-[#faf8f3]" strokeWidth={2} aria-hidden />
             </div>
             <div className="min-w-0">
               <div className="font-display text-xl font-normal leading-tight tracking-brutal">OmniDL</div>
@@ -225,7 +254,7 @@ export default function App() {
                     className="flex h-6 w-6 shrink-0 items-center justify-center border-2 border-current font-mono text-xs font-black leading-none"
                     aria-hidden
                   >
-                    i
+                    {t.glyph ?? "?"}
                   </span>
                 )}
                 <span className="min-w-0 flex-1 truncate">{t.label}</span>
@@ -251,6 +280,7 @@ export default function App() {
             </h1>
             <span className="text-xs font-bold text-neutral-500">
               {tab === "home" && "Paste link · Fetch · pick quality"}
+              {tab === "search" && "YouTube search · Fetch on Home · open in browser"}
               {tab === "queue" && "Downloads · pause / cancel"}
               {tab === "playlist" && "Playlist · batch enqueue"}
               {tab === "history" && "Completed · open folder"}
@@ -266,6 +296,7 @@ export default function App() {
               {animationFull ? (
                 <div key={tab} role="tabpanel">
                   {tab === "home" && <HomePage url={url} setUrl={setUrl} />}
+                  {tab === "search" && <SearchPage />}
                   {tab === "queue" && <Queue />}
                   {tab === "playlist" && <Playlist />}
                   {tab === "history" && <HistoryPage />}
@@ -285,6 +316,7 @@ export default function App() {
                   }}
                 >
                   {tab === "home" && <HomePage url={url} setUrl={setUrl} />}
+                  {tab === "search" && <SearchPage />}
                   {tab === "queue" && <Queue />}
                   {tab === "playlist" && <Playlist />}
                   {tab === "history" && <HistoryPage />}

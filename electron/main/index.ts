@@ -2,7 +2,10 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { BrowserWindow, Menu, app } from "electron";
 import { autoUpdater } from "./updater.js";
+import { applyPortableUserDataPath } from "./user-data-path.js";
 import { initDatabase } from "./db.js";
+
+applyPortableUserDataPath();
 import { registerIpc } from "./ipc-register.js";
 import { setQueueWindow } from "./queue.js";
 import { ensureYtdlp, setBinDir } from "./ytdlp.js";

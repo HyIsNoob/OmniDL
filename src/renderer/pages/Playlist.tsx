@@ -10,6 +10,8 @@ import { usePlaylistUrlStore } from "../store/playlistUrl";
 import { useFetchOverlayStore } from "../store/fetchOverlay";
 import { useSettingsStore } from "../store/settingsUi";
 import { useSessionFetchStore, type PlaylistMode } from "../store/sessionFetch";
+import { useAppStore } from "../store/app";
+import { ConfirmModal } from "../components/ConfirmModal";
 
 const btnHover =
   "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#111] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none";
@@ -58,6 +60,10 @@ export function Playlist() {
   const [refineSnapshot, setRefineSnapshot] = useState<PlaylistInfoPayload["entries"] | null>(null);
   const [quickHint, setQuickHint] = useState<string | null>(null);
   const [thumbBulkBusy, setThumbBulkBusy] = useState(false);
+  const [confirmEnqueueOpen, setConfirmEnqueueOpen] = useState(false);
+  const [enqueueSuccessOpen, setEnqueueSuccessOpen] = useState(false);
+  const [lastEnqueueCount, setLastEnqueueCount] = useState(0);
+  const setTab = useAppStore((s) => s.setTab);
 
   const flashHint = useCallback((msg: string) => {
     setQuickHint(msg);
@@ -257,10 +263,11 @@ export function Playlist() {
     }
   }, [data, flashHint]);
 
-  const enqueueBatch = async () => {
+  const runEnqueueBatch = async () => {
     if (!data?.entries.length || !outDir) return;
     const { label, formatSelector, kind } = selectorFor(mode);
     const items = data.entries.filter((e) => playlistSelectedIds.includes(e.id));
+    let n = 0;
     for (const e of items) {
       await window.omnidl.queueAddToQueue({
         url: e.url,
@@ -272,7 +279,20 @@ export function Playlist() {
         platform: "youtube",
         thumbnailUrl: e.thumbnail ?? undefined,
       });
+      n++;
     }
+    setLastEnqueueCount(n);
+    setEnqueueSuccessOpen(true);
+  };
+
+  const openEnqueueConfirm = () => {
+    if (!data?.entries.length || !outDir) return;
+    const n = data.entries.filter((e) => playlistSelectedIds.includes(e.id)).length;
+    if (!n) {
+      flashHint("No items selected");
+      return;
+    }
+    setConfirmEnqueueOpen(true);
   };
 
   return (
@@ -282,6 +302,66 @@ export function Playlist() {
       initial="hidden"
       animate="show"
     >
+      <ConfirmModal
+        open={confirmEnqueueOpen}
+        title="Add to queue?"
+        body={`Add ${data?.entries.filter((e) => playlistSelectedIds.includes(e.id)).length ?? 0} selected item(s) to the download queue. Output folder: ${outDir || "—"}`}
+        confirmText="Add to queue"
+        cancelText="Cancel"
+        onClose={() => setConfirmEnqueueOpen(false)}
+        onConfirm={() => {
+          void runEnqueueBatch();
+        }}
+      />
+      <AnimatePresence>
+        {enqueueSuccessOpen ? (
+          <motion.div
+            className="fixed inset-0 z-[211] flex items-center justify-center bg-black/50 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="pl-enq-ok-title"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 10 }}
+              className="w-full max-w-md border-4 border-[#111] bg-[#fffef8] p-5 shadow-[8px_8px_0_0_#111]"
+            >
+              <h2
+                id="pl-enq-ok-title"
+                className="font-display text-lg font-normal uppercase tracking-brutal text-[#111]"
+              >
+                Added to queue
+              </h2>
+              <p className="mt-3 text-sm font-bold text-neutral-700">
+                {lastEnqueueCount} item(s) were added to the download queue.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEnqueueSuccessOpen(false)}
+                  className="border-4 border-[#111] bg-white px-4 py-2.5 text-xs font-black uppercase shadow-[4px_4px_0_0_#111]"
+                >
+                  OK
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEnqueueSuccessOpen(false);
+                    setTab("queue");
+                  }}
+                  className="border-4 border-[#111] bg-[#4ecdc4] px-4 py-2.5 text-xs font-black uppercase shadow-[4px_4px_0_0_#111]"
+                >
+                  Open queue
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
       <motion.div variants={stagger.section}>
         <BrutalPanel className="p-5">
         <div className="flex items-center gap-2 text-sm font-black uppercase">
@@ -517,7 +597,7 @@ export function Playlist() {
                 <motion.button
                   type="button"
                   disabled={!outDir || playlistSelectedIds.length === 0}
-                  onClick={() => void enqueueBatch()}
+                  onClick={() => openEnqueueConfirm()}
                   whileHover={outDir && playlistSelectedIds.length > 0 ? { y: -2 } : undefined}
                   whileTap={outDir && playlistSelectedIds.length > 0 ? { scale: 0.98 } : undefined}
                   className={`inline-flex items-center gap-2 border-4 border-[#111] bg-[#ff6b6b] px-4 py-2 font-black uppercase text-white shadow-[4px_4px_0_0_#111] disabled:opacity-50 ${btnHover}`}

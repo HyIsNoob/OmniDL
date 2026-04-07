@@ -1,6 +1,6 @@
 {
   "name": "omnidl",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "OmniDL — YouTube, TikTok & Facebook downloader",
   "main": "out/main/index.js",
   "type": "module",
@@ -16,7 +16,7 @@
     "lint": "eslint .",
     "pack": "npm run build && electron-builder --dir",
     "dist": "npm run build && electron-builder --publish never",
-    "release": "npm run build && electron-builder --publish always",
+    "release": "npm run build && node scripts/check-gh-token.mjs && electron-builder --publish always",
     "changelog:extract": "node scripts/extract-changelog.mjs"
   },
   "dependencies": {

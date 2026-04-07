@@ -336,3 +336,70 @@ export function buildPlaylistPayload(jsonText: string): {
   });
   return { title, entries };
 }
+
+function pickBestThumbnail(thumbs: Array<{ url: string }> | undefined): string | null {
+  if (!thumbs?.length) return null;
+  const last = thumbs[thumbs.length - 1];
+  return last?.url ?? thumbs[0]?.url ?? null;
+}
+
+export function buildSearchResults(jsonText: string): Array<{
+  title: string;
+  url: string;
+  thumbnail: string | null;
+  duration: number | null;
+  viewCount: number | null;
+  uploader: string | null;
+  channel: string | null;
+  description: string | null;
+}> {
+  const data = JSON.parse(jsonText) as {
+    entries?: Array<{
+      id?: string;
+      title?: string;
+      url?: string;
+      webpage_url?: string;
+      duration?: number;
+      view_count?: number;
+      uploader?: string;
+      channel?: string;
+      description?: string;
+      thumbnails?: Array<{ url: string }>;
+    }>;
+  };
+  const out: Array<{
+    title: string;
+    url: string;
+    thumbnail: string | null;
+    duration: number | null;
+    viewCount: number | null;
+    uploader: string | null;
+    channel: string | null;
+    description: string | null;
+  }> = [];
+  for (const e of data.entries ?? []) {
+    const id = String(e.id ?? "");
+    const url =
+      e.webpage_url ||
+      e.url ||
+      (id ? `https://www.youtube.com/watch?v=${encodeURIComponent(id)}` : "");
+    if (!url.startsWith("http")) continue;
+    const desc =
+      typeof e.description === "string" && e.description.length > 0
+        ? e.description.length > 320
+          ? `${e.description.slice(0, 317)}…`
+          : e.description
+        : null;
+    out.push({
+      title: e.title ?? "(no title)",
+      url,
+      thumbnail: pickBestThumbnail(e.thumbnails),
+      duration: typeof e.duration === "number" && e.duration > 0 ? e.duration : null,
+      viewCount: typeof e.view_count === "number" ? e.view_count : null,
+      uploader: e.uploader ?? null,
+      channel: e.channel ?? e.uploader ?? null,
+      description: desc,
+    });
+  }
+  return out;
+}

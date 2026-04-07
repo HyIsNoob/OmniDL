@@ -81,7 +81,16 @@ Output is written to `release/` (gitignored).
 | `npm run build` | Build main, preload, and renderer |
 | `npm run lint` | ESLint |
 | `npm run dist` | Build + electron-builder (no publish) |
-| `npm run release` | Build + publish to GitHub Releases (`GH_TOKEN` / CI) |
+| `npm run release` | Build + publish to GitHub Releases — requires **`GH_TOKEN`** or **`GITHUB_TOKEN`** (PAT with **repo** scope, or fine-grained with **Contents** write on this repo). If you see **401 Bad credentials**, the token is missing, expired, or lacks scope. |
+
+**Publish to GitHub (local):**
+
+```powershell
+$env:GH_TOKEN = "ghp_your_classic_pat_here"
+npm run release
+```
+
+Use a [classic personal access token](https://github.com/settings/tokens) with the **repo** scope, or a fine-grained token with **Repository contents** read/write for `HyIsNoob/OmniDL`.
 
 ## Auto-update
 

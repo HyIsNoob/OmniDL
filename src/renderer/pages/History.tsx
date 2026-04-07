@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FolderOpen, Trash2 } from "lucide-react";
 import type { HistoryRow } from "@shared/ipc";
@@ -7,41 +7,51 @@ import { useTabContentStagger } from "../lib/tabContentMotion";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { HistoryThumb } from "../components/HistoryThumb";
 
-const PAGE = 10;
+const PAGE = 20;
 
 const btnHover =
   "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#111] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none";
 
 type Pending =
   | { type: "clear" }
-  | { type: "remove"; id: number }
+  | { type: "remove"; id: string }
   | null;
 
 export function History() {
   const stagger = useTabContentStagger();
   const [rows, setRows] = useState<HistoryRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [pending, setPending] = useState<Pending>(null);
-  const [page, setPage] = useState(1);
 
-  const reload = useCallback(async () => {
-    setRows(await window.omnidl.historyList());
+  const loadInitial = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await window.omnidl.historyListPaged(0, PAGE);
+      setRows(r.rows);
+      setTotal(r.total);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  const loadMore = useCallback(async () => {
+    if (rows.length >= total) return;
+    setLoading(true);
+    try {
+      const r = await window.omnidl.historyListPaged(rows.length, PAGE);
+      setRows((prev) => [...prev, ...r.rows]);
+      setTotal(r.total);
+    } finally {
+      setLoading(false);
+    }
+  }, [rows.length, total]);
 
-  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE));
-  const pageClamped = Math.min(Math.max(1, page), totalPages);
-  const slice = useMemo(() => {
-    const start = (pageClamped - 1) * PAGE;
-    return rows.slice(start, start + PAGE);
-  }, [rows, pageClamped]);
-
   useEffect(() => {
-    const tp = Math.max(1, Math.ceil(rows.length / PAGE));
-    setPage((p) => Math.min(p, tp));
-  }, [rows.length]);
+    void loadInitial();
+  }, [loadInitial]);
+
+  const hasMore = rows.length < total;
 
   return (
     <motion.div
@@ -63,9 +73,15 @@ export function History() {
         danger
         onClose={() => setPending(null)}
         onConfirm={() => {
-          if (pending?.type === "clear") void window.omnidl.historyClear().then(reload);
-          else if (pending?.type === "remove")
-            void window.omnidl.historyRemove(pending.id).then(reload);
+          if (pending?.type === "clear") {
+            void window.omnidl.historyClear().then(() => void loadInitial());
+          } else if (pending?.type === "remove") {
+            const id = pending.id;
+            void window.omnidl.historyRemove(id).then(() => {
+              setRows((prev) => prev.filter((x) => x.id !== id));
+              setTotal((t) => Math.max(0, t - 1));
+            });
+          }
         }}
       />
       <motion.div variants={stagger.section} className="flex flex-wrap items-center justify-end gap-3">
@@ -80,14 +96,14 @@ export function History() {
           Clear all
         </motion.button>
       </motion.div>
-      {!rows.length && (
+      {!rows.length && !loading && (
         <motion.div variants={stagger.section}>
           <BrutalPanel className="p-8 text-center font-bold text-neutral-500">Empty</BrutalPanel>
         </motion.div>
       )}
       <motion.ul variants={stagger.grid} initial="hidden" animate="show" className="space-y-3">
         <AnimatePresence initial={false}>
-          {slice.map((h) => (
+          {rows.map((h) => (
             <motion.li
               key={h.id}
               layout
@@ -140,27 +156,19 @@ export function History() {
           ))}
         </AnimatePresence>
       </motion.ul>
-      {rows.length > PAGE ? (
+      {hasMore || loading ? (
         <motion.div variants={stagger.section} className="flex flex-wrap items-center justify-center gap-2 text-xs font-black uppercase">
           <button
             type="button"
-            disabled={pageClamped <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={!hasMore || loading}
+            onClick={() => void loadMore()}
             className="border-4 border-[#111] bg-white px-3 py-1.5 disabled:opacity-40"
           >
-            Prev
+            {loading ? "…" : hasMore ? "Load more" : "—"}
           </button>
           <span className="text-neutral-600">
-            {pageClamped} / {totalPages}
+            {rows.length} / {total}
           </span>
-          <button
-            type="button"
-            disabled={pageClamped >= totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            className="border-4 border-[#111] bg-white px-3 py-1.5 disabled:opacity-40"
-          >
-            Next
-          </button>
         </motion.div>
       ) : null}
     </motion.div>
