@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Duplicate modal**: Esc, backdrop, and close paths always resolve the IPC wait so the queue cannot stall.
+- **Auto-update**: release workflow publishes installers and `latest.yml` in one step so the Setup exe sha512 always matches update metadata; re-upload only the exe on GitHub without replacing `latest.yml` caused checksum mismatch.
 
 ## [1.5.1] - 2026-04-01
 

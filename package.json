@@ -16,7 +16,7 @@
     "lint": "eslint .",
     "pack": "npm run build && electron-builder --dir",
     "dist": "npm run build && electron-builder --publish never",
-    "release": "npm run build && node scripts/check-gh-token.mjs && electron-builder --publish always",
+    "release": "npm run build && node scripts/prep-release-notes.mjs && node scripts/check-gh-token.mjs && electron-builder --publish always",
     "changelog:extract": "node scripts/extract-changelog.mjs"
   },
   "dependencies": {
@@ -64,6 +64,9 @@
         "nsis",
         "portable"
       ]
+    },
+    "releaseInfo": {
+      "releaseNotesFile": "release-notes.md"
     },
     "publish": [
       {

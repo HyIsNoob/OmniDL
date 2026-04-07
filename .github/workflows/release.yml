@@ -1,5 +1,8 @@
 # Before tagging: set version in package.json, add a ## [x.y.z] section to CHANGELOG.md, commit.
 # Then: git tag vX.Y.Z && git push origin vX.Y.Z
+#
+# Publishing uses `electron-builder --publish always` so latest.yml, .exe, and .blockmap are uploaded
+# in one step. Do not replace only the Setup .exe on the release page — that causes sha512 mismatch.
 
 name: Release
 
@@ -42,18 +45,13 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Build installers (no publish)
-        run: npm run dist
+      - name: Build app bundle
+        run: npm run build
 
       - name: Write release notes from CHANGELOG
         run: node scripts/extract-changelog.mjs "${{ github.ref_name }}"
 
-      - name: Create GitHub Release and upload artifacts
-        uses: softprops/action-gh-release@v2
-        with:
-          name: OmniDL ${{ github.ref_name }}
-          body_path: release-notes.md
-          files: |
-            release/*
+      - name: Publish to GitHub (installers + latest.yml + blockmaps, single atomic publish)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --publish always
