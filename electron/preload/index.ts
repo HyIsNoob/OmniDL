@@ -15,20 +15,16 @@ const api = {
   getUserDataPath: () => ipcRenderer.invoke("app:getUserDataPath") as Promise<string>,
   getDataPathInfo: () =>
     ipcRenderer.invoke("app:getDataPathInfo") as Promise<{
-      lightPath: string;
-      heavyPath: string;
+      activePath: string;
       portableTargetPath: string;
-      heavyOnPortable: boolean;
+      portableActive: boolean;
       platform: string;
-      isElevated: boolean;
       packaged: boolean;
     }>,
   getStorageStats: () =>
     ipcRenderer.invoke("app:getStorageStats") as Promise<{ cleanable: number; total: number }>,
   openUserDataFolder: () => ipcRenderer.invoke("app:openUserDataFolder") as Promise<void>,
   clearCleanableAppData: () => ipcRenderer.invoke("app:clearCleanableData") as Promise<void>,
-  relaunchElevated: () => ipcRenderer.invoke("app:relaunchElevated") as Promise<boolean>,
-  relaunchNormal: () => ipcRenderer.invoke("app:relaunchNormal") as Promise<boolean>,
   pathsDownloads: () => ipcRenderer.invoke("paths:downloads") as Promise<string>,
   normalizeUrl: (url: string) => ipcRenderer.invoke("url:normalize", url) as Promise<string>,
   ytdlpGetVersion: () => ipcRenderer.invoke("ytdlp:getVersion") as Promise<string | null>,

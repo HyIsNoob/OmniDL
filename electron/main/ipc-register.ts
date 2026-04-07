@@ -1,5 +1,5 @@
 import { app, clipboard, dialog, ipcMain, shell } from "electron";
-import { getHeavyStoragePath, getPortableTargetPath, isHeavyDataOnPortable } from "./user-data-path.js";
+import { getPortableTargetPath, isPortableUserDataActive } from "./user-data-path.js";
 import {
   clearCleanableAppStorage,
   getAppStorageStats,
@@ -8,13 +8,7 @@ import {
 import { downloadThumbnail, sanitizeThumbFileName } from "./thumbnail.js";
 import { autoUpdater } from "./updater.js";
 import { existsSync, readFileSync, unlinkSync } from "node:fs";
-import { writeForceAdminBootstrap } from "./data-location-bootstrap.js";
 import { revealPathInExplorer } from "./fs-utils.js";
-import {
-  isWindowsProcessElevated,
-  relaunchSelfElevatedWindows,
-  relaunchSelfNormalWindows,
-} from "./windows-elevate.js";
 import { join, relative, resolve } from "node:path";
 import {
   buildPlaylistPayload,
@@ -81,12 +75,10 @@ export function registerIpc(isDev: boolean): void {
   ipcMain.handle("app:getVersion", () => app.getVersion());
   ipcMain.handle("app:getUserDataPath", () => app.getPath("userData"));
   ipcMain.handle("app:getDataPathInfo", () => ({
-    lightPath: app.getPath("userData"),
-    heavyPath: getHeavyStoragePath(),
+    activePath: app.getPath("userData"),
     portableTargetPath: getPortableTargetPath(),
-    heavyOnPortable: isHeavyDataOnPortable(),
+    portableActive: isPortableUserDataActive(),
     platform: process.platform,
-    isElevated: process.platform === "win32" ? isWindowsProcessElevated() : false,
     packaged: app.isPackaged,
   }));
   ipcMain.handle("app:getStorageStats", () => getAppStorageStats());
@@ -95,18 +87,6 @@ export function registerIpc(isDev: boolean): void {
   });
   ipcMain.handle("app:clearCleanableData", async (event) => {
     await clearCleanableAppStorage(event.sender);
-  });
-  ipcMain.handle("app:relaunchElevated", () => {
-    if (process.platform !== "win32" || !app.isPackaged) return false;
-    relaunchSelfElevatedWindows();
-    setTimeout(() => app.quit(), 120);
-    return true;
-  });
-  ipcMain.handle("app:relaunchNormal", () => {
-    if (process.platform !== "win32") return false;
-    relaunchSelfNormalWindows();
-    setTimeout(() => app.quit(), 120);
-    return true;
   });
   ipcMain.handle("paths:downloads", () => app.getPath("downloads"));
 
@@ -260,9 +240,6 @@ export function registerIpc(isDev: boolean): void {
   ipcMain.handle("settings:get", (_e, key: string) => settingsGet(key));
   ipcMain.handle("settings:set", (_e, key: string, value: string) => {
     settingsSet(key, value);
-    if (key === "dataLocationForceAdmin") {
-      writeForceAdminBootstrap(value === "1");
-    }
   });
 
   ipcMain.handle("history:list", (): HistoryRow[] => {

@@ -1,6 +1,6 @@
 {
   "name": "omnidl",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "description": "OmniDL — YouTube, TikTok & Facebook downloader",
   "main": "out/main/index.js",
   "type": "module",
@@ -20,12 +20,9 @@
     "changelog:extract": "node scripts/extract-changelog.mjs"
   },
   "dependencies": {
-    "@fontsource/archivo-black": "^5.2.8",
-    "@fontsource/jetbrains-mono": "^5.2.8",
     "electron-updater": "^6.3.9",
     "ffmpeg-static": "^5.2.0",
     "ffprobe-static": "^3.1.0",
-    "lucide-react": "^1.7.0",
     "sql.js": "^1.12.0"
   },
   "build": {
@@ -35,6 +32,7 @@
     "directories": {
       "output": "release"
     },
+    "afterPack": "./scripts/trim-ffprobe-pack.mjs",
     "extraResources": [
       {
         "from": "favicon.ico",
@@ -43,8 +41,7 @@
     ],
     "files": [
       "out/**/*",
-      "package.json",
-      "node_modules/**/*"
+      "package.json"
     ],
     "asarUnpack": [
       "**/node_modules/ffmpeg-static/**/*",
@@ -77,6 +74,8 @@
     ]
   },
   "devDependencies": {
+    "@fontsource/archivo-black": "^5.2.8",
+    "@fontsource/jetbrains-mono": "^5.2.8",
     "@eslint/js": "^9.16.0",
     "@types/node": "^22.10.2",
     "@types/react": "^18.3.18",
@@ -91,6 +90,7 @@
     "eslint-plugin-react-refresh": "^0.4.16",
     "framer-motion": "^11.15.0",
     "globals": "^15.14.0",
+    "lucide-react": "^1.7.0",
     "postcss": "^8.4.49",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

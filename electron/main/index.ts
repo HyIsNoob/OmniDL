@@ -2,13 +2,13 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { BrowserWindow, Menu, app } from "electron";
 import { autoUpdater } from "./updater.js";
-import { initHeavyStorageAndMigrate } from "./user-data-path.js";
-import { initDatabase, settingsGet } from "./db.js";
-import { writeForceAdminBootstrap } from "./data-location-bootstrap.js";
-import { maybeRelaunchElevatedAfterDbInit } from "./windows-elevate.js";
+import { applyPortableUserDataPath } from "./user-data-path.js";
+import { initDatabase } from "./db.js";
 import { registerIpc } from "./ipc-register.js";
 import { setQueueWindow } from "./queue.js";
 import { ensureYtdlp, setBinDir } from "./ytdlp.js";
+
+applyPortableUserDataPath();
 
 const isDev = !app.isPackaged;
 
@@ -160,12 +160,8 @@ function createMainWindow(): void {
 
 app.whenReady().then(async () => {
   applyApplicationMenu();
-  setBinDir(initHeavyStorageAndMigrate());
+  setBinDir(app.getPath("userData"));
   await initDatabase(app.getPath("userData"));
-  writeForceAdminBootstrap(settingsGet("dataLocationForceAdmin") === "1");
-  if (maybeRelaunchElevatedAfterDbInit()) {
-    return;
-  }
   registerIpc(isDev);
   const splash = await showSplashAndEnsure();
   createMainWindow();

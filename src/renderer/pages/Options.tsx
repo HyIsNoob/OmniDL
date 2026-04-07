@@ -34,8 +34,6 @@ export function Options() {
   const queueConcurrency = useSettingsStore((s) => s.queueConcurrency);
   const setNotifyBatchThreshold = useSettingsStore((s) => s.setNotifyBatchThreshold);
   const setQueueConcurrency = useSettingsStore((s) => s.setQueueConcurrency);
-  const dataLocationForceAdmin = useSettingsStore((s) => s.dataLocationForceAdmin);
-  const setDataLocationForceAdmin = useSettingsStore((s) => s.setDataLocationForceAdmin);
   const pendingInstall = useUpdateUiStore((s) => s.pendingInstall);
   const reopenInstall = useUpdateUiStore((s) => s.reopenInstall);
   const setUpdateError = useUpdateUiStore((s) => s.setError);
@@ -45,12 +43,10 @@ export function Options() {
   const [storageCleanable, setStorageCleanable] = useState<number | null>(null);
   const [storageTotal, setStorageTotal] = useState<number | null>(null);
   const [dataPathInfo, setDataPathInfo] = useState<{
-    lightPath: string;
-    heavyPath: string;
+    activePath: string;
     portableTargetPath: string;
-    heavyOnPortable: boolean;
+    portableActive: boolean;
     platform: string;
-    isElevated: boolean;
     packaged: boolean;
   } | null>(null);
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
@@ -270,75 +266,27 @@ export function Options() {
       <BrutalPanel className="p-5">
         <div className="text-lg font-black">App data location</div>
         <p className="mt-2 text-xs font-semibold leading-relaxed text-neutral-600">
-          Settings, database, and small files stay in your profile (AppData). yt-dlp and FFmpeg use a
-          separate folder: <span className="font-mono text-[11px]">omnidl-data</span> next to the app when
-          writable, otherwise under the same profile path.
+          All app data (settings, database, thumbnails, yt-dlp, FFmpeg) uses one folder:{" "}
+          <span className="font-mono text-[11px]">omnidl-data</span> next to the app when that folder is
+          writable; otherwise the default profile path (e.g. AppData).
         </p>
         {dataPathInfo ? (
           <div className="mt-3 space-y-2 border-4 border-dashed border-neutral-400 bg-white/80 p-3 text-xs font-bold text-neutral-800">
             <div>
-              <span className="text-neutral-500">Profile (settings, DB, thumbnails): </span>
-              <span className="break-all font-mono text-[11px]">{dataPathInfo.lightPath}</span>
+              <span className="text-neutral-500">Active path: </span>
+              <span className="break-all font-mono text-[11px]">{dataPathInfo.activePath}</span>
             </div>
-            <div>
-              <span className="text-neutral-500">Tools (yt-dlp, FFmpeg): </span>
-              <span className="break-all font-mono text-[11px]">{dataPathInfo.heavyPath}</span>
-            </div>
-            {dataPathInfo.heavyOnPortable ? (
+            {dataPathInfo.portableActive ? (
               <p className="text-[11px] font-semibold text-neutral-600">
-                Heavy tools are next to the app executable.
+                Using folder next to the app executable.
               </p>
             ) : (
               <div>
-                <span className="text-neutral-500">Preferred for tools if writable: </span>
+                <span className="text-neutral-500">Portable folder if writable: </span>
                 <span className="break-all font-mono text-[11px]">{dataPathInfo.portableTargetPath}</span>
               </div>
             )}
-            {dataPathInfo.platform === "win32" && dataPathInfo.isElevated ? (
-              <p className="text-[11px] font-black uppercase tracking-wide text-emerald-800">
-                Administrator session
-              </p>
-            ) : null}
           </div>
-        ) : null}
-        {dataPathInfo?.platform === "win32" && dataPathInfo.packaged ? (
-          <div className="mt-4 space-y-3 border-4 border-[#111] bg-white p-3">
-            <div className="text-xs font-black uppercase">Write access mode</div>
-            <label className="flex cursor-pointer items-start gap-3 font-bold transition-colors hover:bg-neutral-50">
-              <input
-                type="radio"
-                name="dataLocMode"
-                className="mt-1 h-4 w-4"
-                checked={!dataLocationForceAdmin}
-                onChange={() => void setDataLocationForceAdmin(false)}
-              />
-              <span>
-                <span className="font-black uppercase">Normal</span>
-                <span className="mt-1 block text-xs font-semibold text-neutral-600">
-                  Use folder next to the app when writable; otherwise AppData.
-                </span>
-              </span>
-            </label>
-            <label className="flex cursor-pointer items-start gap-3 font-bold transition-colors hover:bg-neutral-50">
-              <input
-                type="radio"
-                name="dataLocMode"
-                className="mt-1 h-4 w-4"
-                checked={dataLocationForceAdmin}
-                onChange={() => void setDataLocationForceAdmin(true)}
-              />
-              <span>
-                <span className="font-black uppercase">Force administrator</span>
-                <span className="mt-1 block text-xs font-semibold text-neutral-600">
-                  UAC on every launch while this is on. Restart applies the change.
-                </span>
-              </span>
-            </label>
-          </div>
-        ) : dataPathInfo?.platform === "win32" && !dataPathInfo.packaged ? (
-          <p className="mt-3 text-xs font-semibold text-neutral-500">
-            Administrator mode is for the installed Windows build (not dev).
-          </p>
         ) : null}
         <dl className="mt-4 grid max-w-lg grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm font-bold text-neutral-800">
           <dt className="text-neutral-500">Cleanable (approx.)</dt>

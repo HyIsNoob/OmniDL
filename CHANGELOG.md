@@ -7,11 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Released]
 
+## [1.6.2] - 2026-04-07
+
+### Fixed
+
+- Packaged app failing to start after 1.6.1 (portable path init).
+
+### Changed
+
+- **Data location**: single `userData` folder. When the install folder is writable, everything uses `omnidl-data` next to the executable; otherwise the default profile path (e.g. AppData). Removed separate “heavy” vs profile split and administrator relaunch options.
+- **Installer size**: stop bundling all of `node_modules` (dev tooling no longer shipped). `lucide-react` and font packages are build-only; runtime uses the Vite bundle.
+- **ffprobe-static**: after each platform pack, remove unused OS/arch binaries (the npm package ships darwin, linux, and both Windows ABIs; only the target build remains).
+
 ## [1.6.1] - 2026-04-07
 
 ### Added
 
-- **Data layout**: yt-dlp / FFmpeg live under `omnidl-data` next to the install when writable; profile (settings, DB, thumbnails) stays in AppData.
+- **Data layout**: yt-dlp / FFmpeg live under `omnidl-data` next to the install when writable; profile (settings, DB, thumbnails) stays in AppData. (Superseded by 1.6.2 unified layout.)
 
 ### Changed
 
