@@ -243,7 +243,7 @@ export function buildVideoPayload(jsonText: string): VideoInfoPayload {
 
   for (const t of TIERS) {
     if (maxHeight < t) continue;
-    const sel = `bv*[height<=${t}]+ba/b[height<=${t}]`;
+    const sel = `bv*[height<=${t}]+ba/b[height<=${t}]/bv*[width<=${t}]+ba/b[width<=${t}]/bv*+ba/b`;
     const est = estimateBytes(duration, formats, sel);
     const label =
       t === 1440 ? "2K (1440p)" : t === 2160 ? "4K (2160p)" : `${t}p`;

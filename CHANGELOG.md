@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Released]
 
+## [1.6.3] - 2026-08-19
+
+### Fixed
+
+- **YouTube & TikTok downloads**: switched yt-dlp auto-update source to `yt-dlp-nightly-builds` for rapid extractor fixes, added numeric version comparison to prevent downgrades, and enabled `--impersonate chrome` TLS fingerprinting to bypass anti-bot protections.
+- **Error reporting**: overhauled yt-dlp error parsing (`formatYtdlpUserMessage`) to extract the actual root-cause error lines from the end of logs instead of truncating the initial log snippet.
+- **Format selection**: added portrait/vertical video and fallback stream rules to resolution tier format selectors so that portrait videos (TikTok, Shorts, Reels) and combined streams do not fail with "format not available".
+
 ## [1.6.2] - 2026-04-07
 
 ### Fixed

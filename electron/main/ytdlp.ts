@@ -87,6 +87,9 @@ function ytdlpArgs(base: string[]): string[] {
   if (process.platform === "win32") {
     out.push("--windows-filenames");
   }
+  if (!out.includes("--impersonate")) {
+    out.push("--impersonate", "chrome");
+  }
   return out;
 }
 
@@ -103,6 +106,18 @@ async function downloadToFile(url: string, dest: string): Promise<void> {
 }
 
 export async function getLatestYtdlpTag(): Promise<string> {
+  try {
+    const res = await fetch("https://api.github.com/repos/yt-dlp/yt-dlp-nightly-builds/releases/latest", {
+      headers: { "User-Agent": "OmniDL" },
+    });
+    if (res.ok) {
+      const j = (await res.json()) as { tag_name?: string };
+      if (j.tag_name) return j.tag_name;
+    }
+  } catch {
+    /* fallback to main repo */
+  }
+
   const res = await fetch("https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest", {
     headers: { "User-Agent": "OmniDL" },
   });
@@ -121,8 +136,27 @@ export async function getLocalYtdlpVersion(): Promise<string | null> {
   }
 }
 
-function normVer(s: string): string {
-  return s.trim().replace(/^v/i, "");
+function parseVersionKey(v: string): number[] {
+  return v
+    .trim()
+    .replace(/^v/i, "")
+    .split(/[.-]/)
+    .map((x) => parseInt(x, 10))
+    .filter((n) => Number.isFinite(n));
+}
+
+export function isLocalVersionUpToDate(local: string, remote: string): boolean {
+  if (!local || !remote) return false;
+  const l = parseVersionKey(local);
+  const r = parseVersionKey(remote);
+  const len = Math.max(l.length, r.length);
+  for (let i = 0; i < len; i++) {
+    const li = l[i] ?? 0;
+    const ri = r[i] ?? 0;
+    if (li > ri) return true;
+    if (li < ri) return false;
+  }
+  return true;
 }
 
 export async function ensureYtdlp(onLog?: (line: string) => void): Promise<void> {
@@ -134,7 +168,7 @@ export async function ensureYtdlp(onLog?: (line: string) => void): Promise<void>
   } catch {
     onLog?.("Could not check remote yt-dlp version");
   }
-  if (local && remote && normVer(local).startsWith(normVer(remote))) {
+  if (local && remote && isLocalVersionUpToDate(local, remote)) {
     onLog?.(`yt-dlp ${local} OK`);
     return;
   }
@@ -142,14 +176,29 @@ export async function ensureYtdlp(onLog?: (line: string) => void): Promise<void>
     onLog?.(`yt-dlp ${local} (offline)`);
     return;
   }
-  const url =
+
+  const nightlyUrl =
+    process.platform === "win32"
+      ? "https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/download/yt-dlp.exe"
+      : process.platform === "darwin"
+        ? "https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/download/yt-dlp_macos"
+        : "https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/download/yt-dlp";
+
+  const fallbackUrl =
     process.platform === "win32"
       ? "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe"
       : process.platform === "darwin"
         ? "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos"
         : "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp";
-  onLog?.("Downloading yt-dlp…");
-  await downloadToFile(url, getYtdlpPath());
+
+  onLog?.("Downloading yt-dlp (nightly)…");
+  try {
+    await downloadToFile(nightlyUrl, getYtdlpPath());
+  } catch {
+    onLog?.("Retrying with stable yt-dlp…");
+    await downloadToFile(fallbackUrl, getYtdlpPath());
+  }
+
   if (process.platform !== "win32") {
     try {
       chmodSync(getYtdlpPath(), 0o755);
