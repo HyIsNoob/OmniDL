@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OmniDL — Fast, Ad-Free YouTube, TikTok & Facebook Downloader for Windows</title>
+    <meta name="description" content="OmniDL is a free, open-source desktop app for Windows that downloads videos & audio in full quality (4K, 1080p, 320kbps MP3) from YouTube, TikTok, and Facebook without ads." />
+    <meta property="og:title" content="OmniDL — High-Performance Media Downloader" />
+    <meta property="og:description" content="Download YouTube 4K/8K, TikTok (No Watermark), and Facebook in high quality. 100% Free & Open Source." />
+    <meta property="og:type" content="website" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <!-- Top Marquee Ticker -->
+    <div class="marquee-container">
+      <div class="marquee-content">
+        <span>[ OMNIDL <span data-latest-version>v1.6.3</span> ]</span>
+        <span>•</span>
+        <span>4K & 8K 60FPS YOUTUBE DOWNLOADS</span>
+        <span>•</span>
+        <span>TIKTOK NO WATERMARK HD</span>
+        <span>•</span>
+        <span>BATCH PLAYLIST GRABBER</span>
+        <span>•</span>
+        <span>100% FREE & OPEN SOURCE (MIT)</span>
+        <span>•</span>
+        <span>ZERO ADS & ZERO TELEMETRY</span>
+        <span>•</span>
+        <span>[ OMNIDL <span data-latest-version>v1.6.3</span> ]</span>
+        <span>•</span>
+        <span>4K & 8K 60FPS YOUTUBE DOWNLOADS</span>
+        <span>•</span>
+        <span>TIKTOK NO WATERMARK HD</span>
+        <span>•</span>
+        <span>BATCH PLAYLIST GRABBER</span>
+        <span>•</span>
+        <span>100% FREE & OPEN SOURCE (MIT)</span>
+        <span>•</span>
+        <span>ZERO ADS & ZERO TELEMETRY</span>
+      </div>
+    </div>
+
+    <!-- Navigation Header -->
+    <header style="max-width: 1240px; margin: 1.5rem auto 0; padding: 0 1.5rem;">
+      <nav class="brutal-box" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; background: var(--surface);">
+        <a href="#" style="display: flex; align-items: center; gap: 0.75rem; text-decoration: none; color: var(--black);">
+          <div style="background: var(--yellow); border: 3px solid var(--black); width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; box-shadow: 3px 3px 0 0 var(--black);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </div>
+          <div>
+            <div class="font-display" style="font-size: 1.35rem; line-height: 1;">OmniDL</div>
+            <div style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: #555; letter-spacing: 0.08em;">Media Downloader</div>
+          </div>
+        </a>
+
+        <div style="display: flex; align-items: center; gap: 1.5rem;">
+          <div class="nav-links" style="display: flex; gap: 1.25rem; font-family: var(--font-display); font-size: 0.85rem; text-transform: uppercase;">
+            <a href="#showcase" style="text-decoration: none; color: var(--black); transition: color 0.15s;">App Showcase</a>
+            <a href="#calculator" style="text-decoration: none; color: var(--black); transition: color 0.15s;">Speed Benchmark</a>
+            <a href="#features" style="text-decoration: none; color: var(--black); transition: color 0.15s;">Features</a>
+            <a href="#comparison" style="text-decoration: none; color: var(--black); transition: color 0.15s;">Why OmniDL</a>
+            <a href="#faq" style="text-decoration: none; color: var(--black); transition: color 0.15s;">FAQ</a>
+          </div>
+
+          <div style="display: flex; gap: 0.75rem;">
+            <a href="https://github.com/HyIsNoob/OmniDL" target="_blank" rel="noopener noreferrer" class="brutal-btn brutal-btn-white" style="padding: 0.55rem 1rem; font-size: 0.85rem;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <span>GitHub</span>
+            </a>
+            <a href="https://github.com/HyIsNoob/OmniDL/releases/latest" target="_blank" rel="noopener noreferrer" class="brutal-btn brutal-btn-primary" style="padding: 0.55rem 1.1rem; font-size: 0.85rem;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Download Free</span>
+            </a>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <main style="max-width: 1240px; margin: 3rem auto 0; padding: 0 1.5rem;">
+      <section style="text-align: center; margin-bottom: 3.5rem;">
+        <div style="display: inline-flex; align-items: center; gap: 0.6rem; margin-bottom: 1.5rem; flex-wrap: wrap; justify-content: center;">
+          <span class="sticker" style="background: var(--yellow); color: var(--black);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span>v1.6.3 RELEASED • NIGHTLY YT-DLP ENGINE</span>
+          </span>
+          <span class="sticker sticker-right" style="background: var(--teal); color: var(--black);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>100% AD-FREE & LOCAL-FIRST</span>
+          </span>
+        </div>
+
+        <h1 class="font-display" style="font-size: clamp(2.4rem, 5.5vw, 4.5rem); line-height: 1.05; text-transform: uppercase; margin-bottom: 1.5rem;">
+          Download Any Video.<br />
+          <span style="background: var(--yellow); padding: 0 0.5rem; border: 4px solid var(--black); box-shadow: 6px 6px 0 0 var(--black); display: inline-block; margin-top: 0.3rem;">
+            In Full Quality.
+          </span>
+          <br />
+          Zero BS.
+        </h1>
+
+        <p style="font-size: 1.15rem; font-weight: 600; max-width: 760px; margin: 0 auto 2rem; line-height: 1.6; color: #333;">
+          A blazing-fast, beautiful Neo-Brutalist desktop application for Windows. Download 4K/8K YouTube videos, watermark-free TikTok clips, and Facebook Reels at maximum speed — without scam ads or throttled bandwidth.
+        </p>
+
+        <!-- CTA Action Buttons -->
+        <div class="hero-cta-group" style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+          <a href="https://github.com/HyIsNoob/OmniDL/releases/latest/download/OmniDL-Setup-1.6.3.exe" class="brutal-btn brutal-btn-primary" style="font-size: 1.1rem; padding: 1.1rem 2.2rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>DOWNLOAD FOR WINDOWS (<span data-latest-version>v1.6.3</span>)</span>
+          </a>
+          <a href="https://github.com/HyIsNoob/OmniDL/releases/latest" target="_blank" rel="noopener noreferrer" class="brutal-btn brutal-btn-white" style="font-size: 1.05rem; padding: 1.1rem 1.8rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><line x1="22" y1="12" x2="2" y2="12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+            <span>Portable .ZIP & Releases</span>
+          </a>
+          <button id="copy-download-link" class="brutal-btn brutal-btn-teal" style="font-size: 1rem; padding: 1.1rem 1.4rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span>Copy Link</span>
+          </button>
+        </div>
+
+        <div style="display: flex; justify-content: center; align-items: center; gap: 1.5rem; font-size: 0.85rem; font-weight: 700; color: #555; flex-wrap: wrap;">
+          <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            Windows 10 / 11 (64-bit)
+          </span>
+          <span>•</span>
+          <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/></svg>
+            Bundled FFmpeg & yt-dlp
+          </span>
+          <span>•</span>
+          <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            100% Free & Open Source (MIT)
+          </span>
+        </div>
+      </section>
+
+      <!-- App Showcase Section (Real Screenshots) -->
+      <section id="showcase" style="margin-bottom: 5rem;">
+        <div class="brutal-box-lg tilt-card" style="background: var(--surface); padding: 1.5rem; position: relative;">
+          <!-- Frame Top Bar -->
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid var(--black); padding-bottom: 1.25rem; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+            <div style="display: flex; align-items: center; gap: 0.8rem;">
+              <div style="display: flex; gap: 6px;">
+                <span style="width: 14px; height: 14px; border: 2px solid var(--black); background: var(--coral); display: inline-block;"></span>
+                <span style="width: 14px; height: 14px; border: 2px solid var(--black); background: var(--yellow); display: inline-block;"></span>
+                <span style="width: 14px; height: 14px; border: 2px solid var(--black); background: var(--green); display: inline-block;"></span>
+              </div>
+              <span class="font-display" style="font-size: 0.95rem; letter-spacing: 0.05em; text-transform: uppercase;">
+                OmniDL Desktop UI Preview
+              </span>
+            </div>
+
+            <!-- Tab Switcher -->
+            <div id="showcase-tabs" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="showcase-tab-btn sim-tab-btn active" data-tab-idx="0">
+                01 / Home (Fetch)
+              </button>
+              <button class="showcase-tab-btn sim-tab-btn" data-tab-idx="1">
+                02 / In-App Search
+              </button>
+              <button class="showcase-tab-btn sim-tab-btn" data-tab-idx="2">
+                03 / Playlist Batch
+              </button>
+            </div>
+          </div>
+
+          <!-- Showcase Header Info -->
+          <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+              <div id="showcase-title" class="font-display" style="font-size: 1.2rem; text-transform: uppercase; line-height: 1.2;">
+                01 / HOME & STREAM EXTRACTOR
+              </div>
+              <div id="showcase-subtitle" style="font-size: 0.85rem; font-weight: 600; color: #555; margin-top: 0.2rem;">
+                Paste any link to auto-inspect metadata, available resolutions, and audio codecs.
+              </div>
+            </div>
+            <div class="brutal-tag" style="background: var(--yellow); cursor: pointer;" id="showcase-zoom-hint">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+              <span>Click Image to Expand</span>
+            </div>
+          </div>
+
+          <!-- Image Frame with Dynamic Hotspots -->
+          <div class="showcase-frame" id="showcase-img-wrap">
+            <div class="showcase-img-container">
+              <img id="showcase-current-img" class="showcase-img" src="/gallery/main-home.png" alt="OmniDL Main Interface" />
+            </div>
+            <div id="showcase-hotspots">
+              <!-- Rendered dynamically by main.ts -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Interactive Speed & Bitrate Calculator -->
+      <section id="calculator" style="margin-bottom: 5rem;">
+        <div class="brutal-box-lg" style="background: var(--yellow); padding: 2.25rem 2rem;">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+              <span class="brutal-tag" style="background: #ffffff; margin-bottom: 0.6rem;">INTERACTIVE BENCHMARK</span>
+              <h2 class="font-display" style="font-size: clamp(1.8rem, 3.5vw, 2.5rem); text-transform: uppercase;">
+                Format & Speed Calculator
+              </h2>
+            </div>
+            <div class="sticker" style="background: #ffffff;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <span>REAL-TIME ESTIMATOR</span>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; background: #ffffff; border: 4px solid var(--black); padding: 1.75rem; box-shadow: 6px 6px 0 0 var(--black);">
+            <!-- Controls -->
+            <div>
+              <label style="font-family: var(--font-display); font-size: 0.9rem; text-transform: uppercase; display: block; margin-bottom: 0.5rem;">
+                Target Format / Quality:
+              </label>
+              <select id="calc-format" style="width: 100%; border: 3px solid var(--black); padding: 0.75rem 1rem; font-family: var(--font-mono); font-weight: 700; font-size: 0.95rem; margin-bottom: 1.5rem; background: #fff;">
+                <option value="4k">4K Ultra HD (2160p 60fps) — AV1/VP9</option>
+                <option value="1080p" selected>Full HD (1080p 60fps) — H.264</option>
+                <option value="720p">Standard HD (720p 30fps) — H.264</option>
+                <option value="mp3">Audio Extractor (320 kbps MP3)</option>
+              </select>
+
+              <label style="font-family: var(--font-display); font-size: 0.9rem; text-transform: uppercase; display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span>Video Duration:</span>
+                <span id="calc-duration-val" style="color: #000; font-weight: 800;">15 minutes</span>
+              </label>
+              <input id="calc-duration" class="calc-range-slider" type="range" min="1" max="180" value="15" />
+              <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 700; color: #666; margin-top: 0.4rem;">
+                <span>1 min</span>
+                <span>30 min</span>
+                <span>1 hour</span>
+                <span>3 hours</span>
+              </div>
+            </div>
+
+            <!-- Calculated Metrics -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div class="brutal-box" style="padding: 1rem; background: #fffef8;">
+                <div style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #666;">Estimated File Size</div>
+                <div id="calc-size-val" class="font-display" style="font-size: 1.5rem; margin-top: 0.3rem;">420 MB</div>
+                <div id="calc-codec-val" style="font-size: 0.7rem; color: #777; font-weight: 600; margin-top: 0.2rem;">H.264 (60fps)</div>
+              </div>
+
+              <div class="brutal-box" style="padding: 1rem; background: var(--teal);">
+                <div style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #000;">OmniDL Time (~18MB/s)</div>
+                <div id="calc-time-omni" class="font-display" style="font-size: 1.5rem; margin-top: 0.3rem;">~23 seconds</div>
+                <div style="font-size: 0.7rem; font-weight: 800; color: #000; margin-top: 0.2rem; display: flex; align-items: center; gap: 0.3rem;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                  <span>Maximum Speed</span>
+                </div>
+              </div>
+
+              <div class="brutal-box" style="grid-column: span 2; padding: 1rem; background: #f8f8f8;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 0.8rem; font-weight: 700; color: #666;">Online Downloader Web Speed (~1.5MB/s):</span>
+                  <span id="calc-time-web" style="font-family: var(--font-display); font-size: 1rem; color: var(--coral);">~4 min 40s (12x slower)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Platforms Breakdown Grid -->
+      <section id="platforms" style="margin-bottom: 5rem;">
+        <div style="text-align: center; margin-bottom: 2.5rem;">
+          <span class="sticker" style="background: var(--coral); color: white;">UNIVERSAL MEDIA ENGINE</span>
+          <h2 class="font-display" style="font-size: clamp(2rem, 4vw, 3rem); text-transform: uppercase; margin-top: 0.8rem;">
+            Supported Platforms
+          </h2>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+          <!-- YouTube -->
+          <div class="brutal-box brutal-box-interactive tilt-card" style="padding: 1.75rem; background: #ffffff;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+              <span class="brutal-tag" style="background: var(--coral); color: white;">YOUTUBE</span>
+              <span class="icon-svg" style="color: var(--coral);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+              </span>
+            </div>
+            <h3 class="font-display" style="font-size: 1.35rem; margin-bottom: 0.75rem;">4K & 8K HDR Video</h3>
+            <p style="font-size: 0.95rem; line-height: 1.6; color: #444;">
+              Full support for up to 8K 60fps with automatic FFmpeg audio merging (AV1, VP9, H.264 + Opus). Includes playlist batch downloads and YouTube search.
+            </p>
+          </div>
+
+          <!-- TikTok -->
+          <div class="brutal-box brutal-box-interactive tilt-card" style="padding: 1.75rem; background: #ffffff;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+              <span class="brutal-tag" style="background: #000; color: white;">TIKTOK</span>
+              <span class="icon-svg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+              </span>
+            </div>
+            <h3 class="font-display" style="font-size: 1.35rem; margin-bottom: 0.75rem;">No-Watermark HD</h3>
+            <p style="font-size: 0.95rem; line-height: 1.6; color: #444;">
+              Bypasses TikTok anti-bot checks using built-in TLS Chrome impersonation. Downloads clean 1080x1920 video and original soundtrack audio files.
+            </p>
+          </div>
+
+          <!-- Facebook -->
+          <div class="brutal-box brutal-box-interactive tilt-card" style="padding: 1.75rem; background: #ffffff;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+              <span class="brutal-tag" style="background: var(--blue); color: white;">FACEBOOK</span>
+              <span class="icon-svg" style="color: var(--blue);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/></svg>
+              </span>
+            </div>
+            <h3 class="font-display" style="font-size: 1.35rem; margin-bottom: 0.75rem;">Reels & High-Res Videos</h3>
+            <p style="font-size: 0.95rem; line-height: 1.6; color: #444;">
+              Download public Facebook videos, watches, and reels in high definition with automatic quality detection and fast stream downloading.
+            </p>
+          </div>
+
+          <!-- Audio -->
+          <div class="brutal-box brutal-box-interactive tilt-card" style="padding: 1.75rem; background: #ffffff;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+              <span class="brutal-tag" style="background: var(--yellow);">AUDIO ONLY</span>
+              <span class="icon-svg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+              </span>
+            </div>
+            <h3 class="font-display" style="font-size: 1.35rem; margin-bottom: 0.75rem;">320 kbps MP3 Extractor</h3>
+            <p style="font-size: 0.95rem; line-height: 1.6; color: #444;">
+              Extract pure audio streams converted to MP3 (VBR 0 / ~320kbps), M4A, Opus, or FLAC with cover artwork and tags preserved.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Key Features Bento Grid -->
+      <section id="features" style="margin-bottom: 5rem;">
+        <div style="text-align: center; margin-bottom: 2.5rem;">
+          <span class="sticker" style="background: var(--teal);">POWERFUL WORKFLOW</span>
+          <h2 class="font-display" style="font-size: clamp(2rem, 4vw, 3rem); text-transform: uppercase; margin-top: 0.8rem;">
+            Engineered for Power Users
+          </h2>
+        </div>
+
+        <div class="bento-grid">
+          <!-- Card 1: Concurrency Queue (Large) -->
+          <div class="brutal-box brutal-box-interactive tilt-card" style="grid-column: span 7; padding: 2rem; background: var(--yellow);">
+            <div class="brutal-tag" style="background: #ffffff; margin-bottom: 1rem;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+              <span>QUEUE ENGINE</span>
+            </div>
+            <h3 class="font-display" style="font-size: 1.6rem; margin-bottom: 0.8rem;">Parallel Downloads & Speed Control</h3>
+            <p style="font-size: 1rem; line-height: 1.6; font-weight: 600;">
+              Queue up dozens of videos and download up to 3 streams concurrently. Features real-time speed indicators, ETA counters, pause/resume, and smart post-processing cleanup.
+            </p>
+          </div>
+
+          <!-- Card 2: Duplicate Guard (Medium) -->
+          <div class="brutal-box brutal-box-interactive tilt-card" style="grid-column: span 5; padding: 2rem; background: #ffffff;">
+            <div class="brutal-tag" style="background: var(--coral); color: #fff; margin-bottom: 1rem;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>SMART GUARD</span>
+            </div>
+            <h3 class="font-display" style="font-size: 1.4rem; margin-bottom: 0.8rem;">Duplicate File Prevention</h3>
+            <p style="font-size: 0.95rem; line-height: 1.6; color: #444;">
+              OmniDL scouts your download directory before downloading to prevent overwriting or wasting bandwidth on existing files.
+            </p>
+          </div>
+
+          <!-- Card 3: In-App Search -->
+          <div class="brutal-box brutal-box-interactive tilt-card" style="grid-column: span 4; padding: 1.75rem; background: #ffffff;">
+            <div class="brutal-tag" style="background: var(--purple); margin-bottom: 1rem;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <span>SEARCH TAB</span>
+            </div>
+            <h3 class="font-display" style="font-size: 1.3rem; margin-bottom: 0.6rem;">In-App YouTube Search</h3>
+            <p style="font-size: 0.9rem; line-height: 1.6; color: #444;">
+              Search videos by keywords right inside OmniDL. Browse results with thumbnails and fetch in one click.
+            </p>
+          </div>
+
+          <!-- Card 4: Bundled FFmpeg -->
+          <div class="brutal-box brutal-box-interactive tilt-card" style="grid-column: span 4; padding: 1.75rem; background: #ffffff;">
+            <div class="brutal-tag" style="background: var(--green); margin-bottom: 1rem;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg>
+              <span>ZERO CONFIG</span>
+            </div>
+            <h3 class="font-display" style="font-size: 1.3rem; margin-bottom: 0.6rem;">FFmpeg & FFprobe Inside</h3>
+            <p style="font-size: 0.9rem; line-height: 1.6; color: #444;">
+              No command-line setup required. OmniDL bundles custom FFmpeg & FFprobe binaries ready out of the box.
+            </p>
+          </div>
+
+          <!-- Card 5: Portable USB Mode -->
+          <div class="brutal-box brutal-box-interactive tilt-card" style="grid-column: span 4; padding: 1.75rem; background: var(--pink);">
+            <div class="brutal-tag" style="background: #ffffff; margin-bottom: 1rem;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><line x1="22" y1="12" x2="2" y2="12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+              <span>PORTABLE</span>
+            </div>
+            <h3 class="font-display" style="font-size: 1.3rem; margin-bottom: 0.6rem;">Single Folder Mode</h3>
+            <p style="font-size: 0.9rem; line-height: 1.6; font-weight: 600;">
+              Store all configs, database, thumbnails, and binaries in a single <code>omnidl-data</code> folder on a USB stick.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- OmniDL vs Online Web Downloaders -->
+      <section id="comparison" style="margin-bottom: 5rem;">
+        <div style="text-align: center; margin-bottom: 2.5rem;">
+          <span class="sticker" style="background: var(--yellow);">COMPARISON</span>
+          <h2 class="font-display" style="font-size: clamp(2rem, 4vw, 3rem); text-transform: uppercase; margin-top: 0.8rem;">
+            OmniDL vs. Web Downloaders
+          </h2>
+        </div>
+
+        <div class="brutal-box-lg" style="background: #ffffff; overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-family: var(--font-mono); min-width: 620px;">
+            <thead>
+              <tr style="border-bottom: 4px solid var(--black); background: #fdfaf2;">
+                <th style="padding: 1.25rem 1.5rem; font-family: var(--font-display); font-size: 1.1rem; width: 40%;">Feature / Aspect</th>
+                <th style="padding: 1.25rem 1.5rem; font-family: var(--font-display); font-size: 1.1rem; background: var(--yellow); width: 30%;">OmniDL App</th>
+                <th style="padding: 1.25rem 1.5rem; font-family: var(--font-display); font-size: 1.1rem; width: 30%; color: #888;">Online Websites</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 3px solid var(--black);">
+                <td style="padding: 1.1rem 1.5rem; font-weight: 700;">Pop-up Ads & Scam Redirects</td>
+                <td style="padding: 1.1rem 1.5rem; font-weight: 800; color: #009432;">
+                  <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#009432" stroke-width="3" stroke-linecap="square"><polyline points="20 6 9 17 4 12"/></svg>
+                    Zero (100% Ad-Free)
+                  </span>
+                </td>
+                <td style="padding: 1.1rem 1.5rem; color: #ea2027;">
+                  <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea2027" stroke-width="3" stroke-linecap="square"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    Infested with spam ads
+                  </span>
+                </td>
+              </tr>
+              <tr style="border-bottom: 3px solid var(--black); background: #fafafa;">
+                <td style="padding: 1.1rem 1.5rem; font-weight: 700;">4K / 8K Video with Full Audio</td>
+                <td style="padding: 1.1rem 1.5rem; font-weight: 800; color: #009432;">
+                  <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#009432" stroke-width="3" stroke-linecap="square"><polyline points="20 6 9 17 4 12"/></svg>
+                    Yes (Bundled FFmpeg)
+                  </span>
+                </td>
+                <td style="padding: 1.1rem 1.5rem; color: #ea2027;">
+                  <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea2027" stroke-width="3" stroke-linecap="square"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    Capped at 720p or muted
+                  </span>
+                </td>
+              </tr>
+              <tr style="border-bottom: 3px solid var(--black);">
+                <td style="padding: 1.1rem 1.5rem; font-weight: 700;">Batch Playlist Downloads</td>
+                <td style="padding: 1.1rem 1.5rem; font-weight: 800; color: #009432;">
+                  <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#009432" stroke-width="3" stroke-linecap="square"><polyline points="20 6 9 17 4 12"/></svg>
+                    Up to 100+ items in 1 click
+                  </span>
+                </td>
+                <td style="padding: 1.1rem 1.5rem; color: #ea2027;">
+                  <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea2027" stroke-width="3" stroke-linecap="square"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    1 file at a time only
+                  </span>
+                </td>
+              </tr>
+              <tr style="border-bottom: 3px solid var(--black); background: #fafafa;">
+                <td style="padding: 1.1rem 1.5rem; font-weight: 700;">Download Speed</td>
+                <td style="padding: 1.1rem 1.5rem; font-weight: 800; color: #009432;">
+                  <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#009432" stroke-width="3" stroke-linecap="square"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    Max ISP Bandwidth
+                  </span>
+                </td>
+                <td style="padding: 1.1rem 1.5rem; color: #ea2027;">
+                  <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea2027" stroke-width="3" stroke-linecap="square"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    Server-throttled queues
+                  </span>
+                </td>
+              </tr>
+              <tr style="border-bottom: 3px solid var(--black);">
+                <td style="padding: 1.1rem 1.5rem; font-weight: 700;">Privacy & Telemetry</td>
+                <td style="padding: 1.1rem 1.5rem; font-weight: 800; color: #009432;">
+                  <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#009432" stroke-width="3" stroke-linecap="square"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    100% Local-first
+                  </span>
+                </td>
+                <td style="padding: 1.1rem 1.5rem; color: #ea2027;">
+                  <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea2027" stroke-width="3" stroke-linecap="square"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    Trackers & server logs
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 1.1rem 1.5rem; font-weight: 700;">Cost & Subscriptions</td>
+                <td style="padding: 1.1rem 1.5rem; font-weight: 800; color: #009432;">
+                  <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#009432" stroke-width="3" stroke-linecap="square"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    100% Free Forever
+                  </span>
+                </td>
+                <td style="padding: 1.1rem 1.5rem; color: #ea2027;">
+                  <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea2027" stroke-width="3" stroke-linecap="square"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    Paywalls & fake VIP tiers
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- FAQ Accordion -->
+      <section id="faq" style="margin-bottom: 5rem; max-width: 900px; margin-left: auto; margin-right: auto;">
+        <div style="text-align: center; margin-bottom: 2.5rem;">
+          <span class="sticker" style="background: var(--pink);">TECHNICAL QUESTIONS</span>
+          <h2 class="font-display" style="font-size: clamp(2rem, 4vw, 3rem); text-transform: uppercase; margin-top: 0.8rem;">
+            Frequently Asked Questions
+          </h2>
+        </div>
+
+        <div>
+          <!-- Q1 -->
+          <div class="faq-item open">
+            <div class="faq-header">
+              <span>Is OmniDL really 100% free and open-source?</span>
+              <div class="faq-icon-box">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </div>
+            </div>
+            <div class="faq-content">
+              Yes. OmniDL is licensed under the permissive MIT License. There are no paid tiers, no subscription locks, and no advertisements. You can inspect and build the complete source code from <a href="https://github.com/HyIsNoob/OmniDL" target="_blank" rel="noopener noreferrer" style="color: #000; font-weight: 800;">GitHub</a>.
+            </div>
+          </div>
+
+          <!-- Q2 -->
+          <div class="faq-item">
+            <div class="faq-header">
+              <span>How does OmniDL merge 4K video and audio?</span>
+              <div class="faq-icon-box">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </div>
+            </div>
+            <div class="faq-content">
+              YouTube delivers 1080p, 2K, 4K, and 8K videos as separate video and audio DASH streams. OmniDL bundles customized FFmpeg binaries to merge the video track (AV1/VP9/H264) and audio track (Opus/AAC) into a pristine, fully compatible MP4 file automatically.
+            </div>
+          </div>
+
+          <!-- Q3 -->
+          <div class="faq-item">
+            <div class="faq-header">
+              <span>Does TikTok download with or without watermark?</span>
+              <div class="faq-icon-box">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </div>
+            </div>
+            <div class="faq-content">
+              OmniDL downloads the original raw 1080x1920 video stream without the animated TikTok watermark. It also allows you to extract the original audio track in one click.
+            </div>
+          </div>
+
+          <!-- Q4 -->
+          <div class="faq-item">
+            <div class="faq-header">
+              <span>How do I update the download engine if a website changes?</span>
+              <div class="faq-icon-box">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </div>
+            </div>
+            <div class="faq-content">
+              OmniDL automatically checks for the latest nightly extractor engine from <code>yt-dlp-nightly-builds</code>. You can also click <strong>Update yt-dlp</strong> in the app's <strong>Options</strong> tab at any time to grab the latest daily bug fixes.
+            </div>
+          </div>
+
+          <!-- Q5 -->
+          <div class="faq-item">
+            <div class="faq-header">
+              <span>Where are downloaded files saved?</span>
+              <div class="faq-icon-box">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </div>
+            </div>
+            <div class="faq-content">
+              By default, files are saved to your system's standard Downloads directory. You can customize the download location per job or change the default path in the app settings.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Bottom Big CTA Banner -->
+      <section style="margin-bottom: 4rem;">
+        <div class="brutal-box-lg tilt-card" style="background: var(--yellow); padding: 3.5rem 2rem; text-align: center;">
+          <h2 class="font-display" style="font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1.1; text-transform: uppercase; margin-bottom: 1.25rem;">
+            Ready for Lightning Fast Downloads?
+          </h2>
+          <p style="font-size: 1.15rem; font-weight: 700; max-width: 600px; margin: 0 auto 2rem; color: #222;">
+            Download OmniDL today. No credit card, no sign-up, no BS. Just pure downloading power.
+          </p>
+
+          <div class="hero-cta-group" style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+            <a href="https://github.com/HyIsNoob/OmniDL/releases/latest/download/OmniDL-Setup-1.6.3.exe" class="brutal-btn brutal-btn-danger" style="font-size: 1.2rem; padding: 1.2rem 2.5rem;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>DOWNLOAD OMNIDL <span data-latest-version>v1.6.3</span> (FREE)</span>
+            </a>
+            <a href="https://github.com/HyIsNoob/OmniDL" target="_blank" rel="noopener noreferrer" class="brutal-btn brutal-btn-white" style="font-size: 1.1rem; padding: 1.2rem 1.8rem;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <span>STAR ON GITHUB</span>
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer style="border-top: 4px solid var(--black); background: #ffffff; padding: 3rem 1.5rem; font-family: var(--font-mono);">
+      <div style="max-width: 1240px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 2rem;">
+        <div>
+          <div class="font-display" style="font-size: 1.3rem;">OmniDL</div>
+          <p style="font-size: 0.85rem; color: #666; margin-top: 0.4rem; max-width: 440px;">
+            Open-source media downloader for Windows. Released under the MIT License. Intended for personal, educational, and archival use.
+          </p>
+        </div>
+
+        <div style="display: flex; gap: 1.5rem; font-family: var(--font-display); font-size: 0.9rem; text-transform: uppercase; flex-wrap: wrap;">
+          <a href="https://github.com/HyIsNoob/OmniDL" target="_blank" rel="noopener noreferrer" style="color: var(--black); text-decoration: none;">GitHub</a>
+          <a href="https://github.com/HyIsNoob/OmniDL/releases" target="_blank" rel="noopener noreferrer" style="color: var(--black); text-decoration: none;">Releases</a>
+          <a href="https://github.com/HyIsNoob/OmniDL/issues" target="_blank" rel="noopener noreferrer" style="color: var(--black); text-decoration: none;">Issues</a>
+          <a href="https://github.com/HyIsNoob/OmniDL/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer" style="color: var(--black); text-decoration: none;">Changelog</a>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Lightbox Modal for Screenshots -->
+    <div id="lightbox-modal" class="lightbox-modal">
+      <div class="lightbox-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--yellow); border-bottom: 4px solid var(--black); padding: 0.75rem 1.25rem;">
+          <span class="font-display" style="font-size: 1rem; text-transform: uppercase;">UI Screenshot Inspection</span>
+          <button id="lightbox-close" class="brutal-btn brutal-btn-danger" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <span>Close</span>
+          </button>
+        </div>
+        <img id="lightbox-img" src="" alt="Screenshot" style="width: 100%; display: block; max-height: 80vh; object-fit: contain; background: #000;" />
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="landing-toast" class="toast-msg"></div>
+
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

@@ -17,7 +17,9 @@
     "pack": "npm run build && electron-builder --dir",
     "dist": "npm run build && electron-builder --publish never",
     "release": "npm run build && node scripts/prep-release-notes.mjs && node scripts/check-gh-token.mjs && electron-builder --publish always",
-    "changelog:extract": "node scripts/extract-changelog.mjs"
+    "changelog:extract": "node scripts/extract-changelog.mjs",
+    "landing:dev": "npm --prefix landing run dev",
+    "landing:build": "npm --prefix landing run build"
   },
   "dependencies": {
     "electron-updater": "^6.3.9",
