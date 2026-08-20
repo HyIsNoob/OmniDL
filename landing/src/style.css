@@ -249,6 +249,51 @@ body {
   transform: rotate(0deg) scale(1.03);
 }
 
+/* Showcase & Simulator Tab Buttons */
+.showcase-tab-btn,
+.sim-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.15rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: #ffffff;
+  color: var(--black);
+  border: 3px solid var(--black);
+  box-shadow: 3px 3px 0 0 var(--black);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.12s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.showcase-tab-btn:hover:not(.active),
+.sim-tab-btn:hover:not(.active) {
+  background: #fffbdf;
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 0 var(--black);
+}
+
+.showcase-tab-btn.active,
+.sim-tab-btn.active {
+  background: var(--yellow);
+  color: var(--black);
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 800;
+  box-shadow: 2px 2px 0 0 var(--black);
+  transform: translate(2px, 2px);
+}
+
+.showcase-tab-btn:active,
+.sim-tab-btn:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 0 var(--black);
+}
+
 /* Showcase Screenshot Display */
 .showcase-frame {
   position: relative;
